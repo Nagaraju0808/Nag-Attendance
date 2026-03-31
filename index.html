@@ -769,6 +769,23 @@ let pendingMarks  = {};
 let isHolidayDay  = false;
 let lastSavedDate = null;
 
+// Holiday reasons stored locally (no DB schema change needed)
+// Format: { 'YYYY-MM-DD': 'reason string' }
+const LS_HOLIDAY_REASONS = 'nagaraju_holiday_reasons';
+let holidayReasons = {};
+function _loadHolidayReasons() {
+  try { const r = localStorage.getItem(LS_HOLIDAY_REASONS); holidayReasons = r ? JSON.parse(r) : {}; } catch(e) { holidayReasons = {}; }
+}
+function _saveHolidayReason(dateStr, reason) {
+  holidayReasons[dateStr] = reason;
+  try { localStorage.setItem(LS_HOLIDAY_REASONS, JSON.stringify(holidayReasons)); } catch(e) {}
+}
+function _removeHolidayReason(dateStr) {
+  delete holidayReasons[dateStr];
+  try { localStorage.setItem(LS_HOLIDAY_REASONS, JSON.stringify(holidayReasons)); } catch(e) {}
+}
+function getHolidayReason(dateStr) { return holidayReasons[dateStr] || ''; }
+
 // ══════════════════════════════════════════
 //  SUPABASE INIT
 // ══════════════════════════════════════════
@@ -1557,8 +1574,7 @@ function loadDaySchedule() {
   }
 
   if (isHolidayDay) {
-    const holidayRec = alreadyMarked.find(r => r.holiday_reason);
-    const reason = holidayRec?.holiday_reason || '';
+    const reason = getHolidayReason(dateStr);
     markedBanner.innerHTML = `<div class="holiday-banner">🏖 This day is marked as a <strong>Holiday</strong>${reason ? ` — <em>${reason}</em>` : ''} — all periods are excluded from attendance calculations.</div>`;
     scheduleEl.innerHTML = ''; saveSection.style.display = 'none'; return;
   }
@@ -1696,6 +1712,7 @@ async function _applyHolidayStatus(dateStr, reason) {
   const periods = ACTIVE_TIMETABLE[dayName];
 
   if (!periods || periods.length === 0) {
+    _saveHolidayReason(dateStr, reason);
     isHolidayDay = true;
     document.getElementById('holiday-toggle-btn').classList.add('active');
     showToast(`🏖 Holiday "${reason}" noted`, 'info');
@@ -1705,12 +1722,15 @@ async function _applyHolidayStatus(dateStr, reason) {
   const placeholders = periods.map(p => ({
     date: dateStr, day: dayName, period: p.period, subject: p.subject,
     subject_name: ACTIVE_SUBJECTS[p.subject]?.name || p.subject,
-    status: 'A', is_holiday: true, holiday_reason: reason,
+    status: 'A', is_holiday: true,
     semester_id: activeSemester?.id || null
   }));
 
   const { error } = await db.from('attendance_records').upsert(placeholders, { onConflict: 'date,period,subject' });
   if (error) { showToast('Failed to mark holiday: ' + error.message, 'error'); return; }
+
+  // Save reason in localStorage — no DB column needed
+  _saveHolidayReason(dateStr, reason);
 
   const { data } = await db.from('attendance_records').select('*').order('date', { ascending: false });
   if (data) attendanceRecords = activeSemester ? data.filter(r => r.semester_id === activeSemester.id || r.semester_id === null) : data;
@@ -1724,6 +1744,7 @@ async function _applyHolidayStatus(dateStr, reason) {
 async function _removeHolidayStatus(dateStr) {
   const source = attendanceRecords.filter(r => r.date === dateStr);
   if (source.length === 0) {
+    _removeHolidayReason(dateStr);
     isHolidayDay = false;
     document.getElementById('holiday-toggle-btn').classList.remove('active');
     showToast('✅ Holiday removed', 'success');
@@ -1732,12 +1753,13 @@ async function _removeHolidayStatus(dateStr) {
   }
   const rows = source.map(r => ({
     date: r.date, day: r.day, period: r.period, subject: r.subject,
-    subject_name: r.subject_name, status: r.status, is_holiday: false, holiday_reason: null,
+    subject_name: r.subject_name, status: r.status, is_holiday: false,
     semester_id: r.semester_id
   }));
   const { error } = await db.from('attendance_records').upsert(rows, { onConflict: 'date,period,subject' });
   if (error) { showToast('Failed: ' + error.message, 'error'); return; }
-  attendanceRecords.forEach(r => { if (r.date === dateStr) { r.is_holiday = false; r.holiday_reason = null; } });
+  attendanceRecords.forEach(r => { if (r.date === dateStr) r.is_holiday = false; });
+  _removeHolidayReason(dateStr);
   isHolidayDay = false;
   document.getElementById('holiday-toggle-btn').classList.remove('active');
   showToast('✅ Holiday removed', 'success');
@@ -2049,7 +2071,7 @@ function renderHistory() {
     const t=dayRecs.filter(r=>!r.is_holiday).length;
     const dow=WEEK_DAYS[new Date(date+'T00:00:00').getDay()];
     const pct=t>0?(p/t*100):0;
-    const holidayReason = isHoliday ? (dayRecs.find(r=>r.holiday_reason)?.holiday_reason || '') : '';
+    const holidayReason = isHoliday ? getHolidayReason(date) : '';
     const periodsHtml = isHoliday
       ? `<span class="hist-badge hist-holiday">🏖 Holiday${holidayReason ? `: ${holidayReason}` : ''}</span>`
       : dayRecs.sort((a,b)=>a.period-b.period).map(r=>`<span class="hist-badge hist-${r.status.toLowerCase()}">${r.subject.replace(/_LAB$/,' Lab').replace(/_/,' ')} ${r.status}</span>`).join('');
@@ -2278,6 +2300,7 @@ window.addEventListener('resize',()=>{
 });
 
 async function init() {
+  _loadHolidayReasons();
   document.getElementById('loading-status').textContent = 'Connecting to database...';
   await initSupabase();
 
