@@ -1,0 +1,19 @@
+{
+  "name": "Nagaraju Attendance Tracker",
+  "short_name": "Attendance",
+  "description": "Personal attendance tracker for Nagaraju - GCET CSE-DS B-Section",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#060d1f",
+  "theme_color": "#00d4ff",
+  "orientation": "portrait-primary",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
