@@ -1,4 +1,4 @@
-const CACHE_NAME = 'academic-dashboard-v2';
+const CACHE_NAME = 'academic-dashboard-v3';
 const ASSETS = [
   './',
   './index.html',
@@ -8,6 +8,7 @@ const ASSETS = [
   './css/dashboard.css',
   './css/responsive.css',
   './js/app.js',
+  './js/wizard.js',
   './js/ui.js',
   './js/auth.js',
   './js/profile.js',

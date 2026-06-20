@@ -1,15 +1,50 @@
 // js/app.js — main entry point (loaded as type="module" from index.html)
 import { initAuth, isLoggedIn, getCurrentUser, logout, renderLoginScreen } from './auth.js';
 import { loadProfile, profileNeedsSetup, renderSetupWizard, getProfile, profileInitials, saveProfile } from './profile.js';
-import { navigate, toggleSidebar, closeSidebar, loadTheme, toggleTheme, showToast, $ } from './ui.js';
+import { navigate, toggleSidebar, closeSidebar, loadTheme, toggleTheme, setTheme, showToast, $ } from './ui.js';
 import * as Attendance from './attendance.js';
 import * as Results from './result-tracker.js';
 import * as Cal from './calendar.js';
+import * as Wizard from './wizard.js';
 
 window.__att = {
   mark: Attendance.markPeriod,
   save: Attendance.saveAttendance,
   holiday: Attendance.toggleHolidayForDate,
+  undoPeriod: Attendance.undoPeriod,
+  showUndoDayConfirm: Attendance.showUndoDayConfirm,
+  hideUndoDayConfirm: Attendance.hideUndoDayConfirm,
+  undoDay: async () => { await Attendance.undoDay(); },
+  closeHolidayModal: Attendance.closeHolidayModal,
+  updateHolidayPreview: Attendance.updateHolidayPreview,
+  submitHolidayMark: Attendance.submitHolidayMark,
+  removeHoliday: async (date) => { await Attendance.removeHolidayFromMgmt(date); Attendance.renderHolidayManagement(); },
+  openAddHoliday: Attendance.openAddHolidayFromMgmt,
+  showCalDay: Attendance.showCalendarDayDetail,
+  calPrev: Attendance.calendarPrev,
+  calNext: Attendance.calendarNext,
+  calToday: Attendance.calendarToday,
+  toggleArchive: Attendance.toggleArchiveBlock,
+  exportCSV: Attendance.exportDataCSV,
+  clearHistory: Attendance.clearAllHistory,
+  saveInitialData: async () => { await Attendance.saveInitialData(); },
+  openEndSemModal: Attendance.openEndSemModal,
+  closeEndSemModal: Attendance.closeEndSemModal,
+  confirmEndSem: () => Attendance.confirmEndSemester(async () => { await initData(); navigate('settings'); }),
+  editSubject: (key) => openSubjectEditor(key),
+  deleteSubject: async (key) => { await Attendance.deleteSubject(key); },
+  enableBrowserNotif: async () => {
+    if (!('Notification' in window)) return showToast('Not supported in this browser', 'error');
+    const perm = await Notification.requestPermission();
+    showToast(perm === 'granted' ? '🔔 Notifications enabled' : 'Permission ' + perm, perm === 'granted' ? 'success' : 'info');
+  },
+  saveSubject: async () => {
+    await Attendance.addOrUpdateSubject({
+      key: $('subj-key').value, name: $('subj-name').value, code: $('subj-code').value,
+      faculty: $('subj-faculty').value, color: $('subj-color').value, periods_per_week: parseInt($('subj-pw').value) || 0
+    });
+    closeSubjectEditor();
+  }
 };
 window.__results = {
   edit: (id) => editResult(id),
@@ -20,7 +55,9 @@ window.navigate = navigate;
 window.toggleSidebar = toggleSidebar;
 window.closeSidebar = closeSidebar;
 window.toggleTheme = toggleTheme;
+window.setThemeMode = (m) => setTheme(m);
 window.logoutApp = async () => { await logout(); location.reload(); };
+window.__wizardOnFinish = async () => { await initData(); navigate('dashboard'); };
 
 async function boot() {
   await initAuth();
@@ -52,7 +89,12 @@ async function initData() {
   await Attendance.loadAttendanceData();
   await Results.loadResults();
   updateSidebarProfile();
-  if (result === 'needs-wizard') showToast('Set up a semester in Settings to start tracking attendance', 'info');
+  if (result === 'needs-wizard') {
+    showToast('Set up your first semester to start tracking attendance', 'info');
+    setTimeout(() => Wizard.openWizard(window.__wizardOnFinish), 500);
+  } else {
+    Attendance.checkAndNotifyLowAttendance();
+  }
 }
 
 function updateSidebarProfile() {
@@ -73,7 +115,9 @@ function wireEvents() {
     const page = e.detail.page;
     if (page === 'dashboard') Attendance.renderDashboard();
     if (page === 'mark') Attendance.initMarkPage();
+    if (page === 'subjects') Attendance.renderSubjectManagement();
     if (page === 'timetable') Attendance.renderTimetable();
+    if (page === 'attcal') { Attendance.initCalendarPage(); Attendance.renderCalendar(); }
     if (page === 'analytics') Attendance.renderAnalytics();
     if (page === 'history') Attendance.renderHistory();
     if (page === 'results') Results.renderResultsDashboard();
@@ -153,7 +197,47 @@ function renderSettingsPage() {
   }
   const userEl = $('settings-user-email');
   if (userEl) userEl.textContent = getCurrentUser()?.email || '—';
+  Attendance.renderSemesterManagement();
+  Attendance.renderInitialDataForm();
+  Attendance.renderHolidayManagement();
+  const savedTheme = localStorage.getItem('dashboard_theme') || 'system';
+  document.querySelectorAll('[data-theme-option]').forEach(b => b.classList.toggle('active', b.dataset.themeOption === savedTheme));
+  const notifToggle = $('notif-low-toggle');
+  if (notifToggle) notifToggle.checked = localStorage.getItem('dash_notif_low') !== 'false';
 }
+
+function openSubjectEditor(key) {
+  const card = $('subject-editor-card');
+  if (!card) return;
+  card.style.display = 'block';
+  if (key) {
+    const sub = Attendance.state.ACTIVE_SUBJECTS[key] || {};
+    $('subject-editor-title').textContent = 'Edit Subject: ' + key;
+    $('subj-original-key').value = key;
+    $('subj-key').value = key; $('subj-key').disabled = true;
+    $('subj-name').value = sub.name || ''; $('subj-code').value = sub.code || '';
+    $('subj-faculty').value = sub.faculty || ''; $('subj-color').value = sub.color || '#00d4ff';
+    $('subj-pw').value = sub.pw || 4;
+  } else {
+    $('subject-editor-title').textContent = 'Add Subject';
+    $('subj-original-key').value = '';
+    ['subj-key','subj-name','subj-code','subj-faculty'].forEach(id => $(id).value = '');
+    $('subj-key').disabled = false; $('subj-color').value = '#00d4ff'; $('subj-pw').value = 4;
+  }
+}
+function closeSubjectEditor() {
+  const card = $('subject-editor-card');
+  if (card) card.style.display = 'none';
+  Attendance.renderSubjectManagement();
+}
+
+window.__att.switchHistTab = (tab, btn) => {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  $('hist-tab-' + tab)?.classList.add('active');
+  if (tab === 'archive') Attendance.renderArchive();
+};
 window.__settings = {
   save: async () => {
     await saveProfile({
@@ -182,7 +266,9 @@ const SHELL_HTML = `
       <label>ATTENDANCE</label>
       <div class="nav-item active" data-page="dashboard">🏠 Dashboard</div>
       <div class="nav-item" data-page="mark">✅ Mark Attendance</div>
+      <div class="nav-item" data-page="subjects">📚 Subjects</div>
       <div class="nav-item" data-page="timetable">📋 Timetable</div>
+      <div class="nav-item" data-page="attcal">🗓️ Attendance Calendar</div>
       <div class="nav-item" data-page="analytics">📊 Analytics</div>
       <div class="nav-item" data-page="history">🕐 History</div>
       <label style="margin-top:16px">ACADEMICS</label>
@@ -206,18 +292,52 @@ const SHELL_HTML = `
     <div id="section-dashboard" class="section active">
       <div class="page-header"><button class="btn" onclick="toggleSidebar()" id="menu-btn" style="display:none">☰</button>
         <h2 class="page-title">Welcome back!</h2><p class="page-sub" id="dash-date"></p></div>
+      <div id="sem-expiry-banner"></div>
+      <div id="dash-alerts"></div>
+      <div id="streak-content"></div>
       <div class="grid-4">
         <div class="card stat-card"><span class="stat-value" id="stat-total-pct">–%</span><span class="stat-label">Overall %</span><div class="stat-trend" id="stat-trend"></div></div>
         <div class="card stat-card"><span class="stat-value" id="stat-present">–</span><span class="stat-label">Present</span></div>
         <div class="card stat-card"><span class="stat-value" id="stat-absent">–</span><span class="stat-label">Absent</span></div>
         <div class="card stat-card"><span class="stat-value" id="stat-total">–</span><span class="stat-label">Total</span></div>
       </div>
+      <div class="card" style="margin-bottom:24px" id="weekly-goal-content"></div>
       <div class="grid-2">
         <div class="card"><div class="section-h">📈 Overview</div><div class="donut-wrapper"><div class="chart-container"><canvas id="donutChart"></canvas></div>
           <div class="donut-center"><div class="donut-pct" id="donut-pct">–%</div></div></div></div>
         <div class="card"><div class="section-h">📚 Subjects</div><div id="dash-subjects"></div></div>
       </div>
       <div class="card"><div class="section-h">🎯 Classes Needed to Reach 75%</div><div id="dash-classes-needed"></div></div>
+      <div class="card">
+        <div class="section-actions"><span class="section-h">💡 Attendance Planning Insights</span><span id="planning-mode-badge"></span></div>
+        <div id="planning-insights-content"></div>
+      </div>
+      <div class="card"><div class="section-h">🕐 Recent Activity</div><div id="recent-activity"></div></div>
+    </div>
+
+    <div id="section-subjects" class="section">
+      <div class="page-header"><h2 class="page-title">📚 Subject Management</h2></div>
+      <div class="card">
+        <div class="section-actions"><span class="section-h">Your Subjects</span>
+          <button class="btn btn-primary" onclick="window.__att.editSubject(null)">+ Add Subject</button></div>
+        <div id="subject-mgmt-list"></div>
+      </div>
+      <div class="card" id="subject-editor-card" style="display:none">
+        <div class="section-h" id="subject-editor-title">Add Subject</div>
+        <input type="hidden" id="subj-original-key">
+        <div class="wizard-field"><label class="wizard-label">Key (short code)</label><input id="subj-key" class="cute-input" placeholder="e.g. DAA"></div>
+        <div class="wizard-field"><label class="wizard-label">Full Name</label><input id="subj-name" class="cute-input"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="wizard-field"><label class="wizard-label">Code</label><input id="subj-code" class="cute-input"></div>
+          <div class="wizard-field"><label class="wizard-label">Faculty</label><input id="subj-faculty" class="cute-input"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="wizard-field"><label class="wizard-label">Color</label><input id="subj-color" class="cute-input" type="color" value="#00d4ff"></div>
+          <div class="wizard-field"><label class="wizard-label">Periods/Week</label><input id="subj-pw" class="cute-input" type="number" value="4"></div>
+        </div>
+        <div style="display:flex;gap:8px"><button class="btn btn-primary" onclick="window.__att.saveSubject()">💾 Save Subject</button>
+          <button class="btn" onclick="document.getElementById('subject-editor-card').style.display='none'">Cancel</button></div>
+      </div>
     </div>
 
     <div id="section-mark" class="section">
@@ -226,8 +346,17 @@ const SHELL_HTML = `
         <input type="date" id="att-date" class="date-input"><div class="day-label" id="day-name">—</div>
         <button class="holiday-toggle-btn" id="holiday-toggle-btn">🏖 Mark Holiday</button>
       </div></div>
+      <div id="already-marked-banner"></div>
       <div id="day-schedule"></div>
-      <div id="save-section" style="display:none;text-align:center"><button class="save-btn" id="save-btn">💾 Save Attendance</button></div>
+      <div id="save-section" style="display:none;text-align:center">
+        <button class="save-btn" id="save-btn">💾 Save Attendance</button>
+        <div id="undo-day-strip"><span class="undo-day-link" onclick="window.__att.showUndoDayConfirm()">↩ Undo today's attendance</span></div>
+        <div id="undo-day-confirm">
+          <span class="undo-confirm-label">Reset all entries for this day?</span>
+          <button class="undo-confirm-yes" onclick="window.__att.undoDay()">Yes, reset</button>
+          <button class="undo-confirm-no" onclick="window.__att.hideUndoDayConfirm()">Cancel</button>
+        </div>
+      </div>
     </div>
 
     <div id="section-timetable" class="section">
@@ -246,7 +375,36 @@ const SHELL_HTML = `
 
     <div id="section-history" class="section">
       <div class="page-header"><h2 class="page-title">🕐 History</h2><span id="history-count"></span></div>
-      <div class="card"><div id="history-list" class="history-list"></div></div>
+      <div class="card">
+        <div class="tab-bar">
+          <button class="tab-btn active" onclick="window.__att.switchHistTab('current',this)">📅 Current</button>
+          <button class="tab-btn" onclick="window.__att.switchHistTab('archive',this)">🗃 Archive</button>
+        </div>
+        <div id="hist-tab-current" class="tab-content active"><div id="history-list" class="history-list"></div></div>
+        <div id="hist-tab-archive" class="tab-content"><div id="archive-list"></div></div>
+      </div>
+    </div>
+
+    <div id="section-attcal" class="section">
+      <div class="page-header"><h2 class="page-title">📅 Attendance Calendar</h2></div>
+      <div class="card">
+        <div class="calendar-nav">
+          <button class="calendar-nav-btn" onclick="window.__att.calPrev()">← Prev</button>
+          <div class="calendar-month-title" id="calendar-month-title">—</div>
+          <div style="display:flex;gap:8px">
+            <button class="calendar-nav-btn" onclick="window.__att.calToday()" style="font-size:.78rem">Today</button>
+            <button class="calendar-nav-btn" onclick="window.__att.calNext()">Next →</button>
+          </div>
+        </div>
+        <div class="calendar-grid" id="calendar-grid"></div>
+        <div class="calendar-legend">
+          <div class="calendar-legend-item"><div class="calendar-legend-dot" style="background:rgba(0,255,136,.5)"></div>Present</div>
+          <div class="calendar-legend-item"><div class="calendar-legend-dot" style="background:rgba(255,187,0,.5)"></div>Partial</div>
+          <div class="calendar-legend-item"><div class="calendar-legend-dot" style="background:rgba(255,51,102,.5)"></div>Low/Absent</div>
+          <div class="calendar-legend-item"><div class="calendar-legend-dot" style="background:rgba(168,85,247,.5)"></div>Holiday</div>
+        </div>
+      </div>
+      <div id="calendar-day-detail"></div>
     </div>
 
     <div id="section-results" class="section">
@@ -315,13 +473,91 @@ const SHELL_HTML = `
 
     <div id="section-settings" class="section">
       <div class="page-header"><h2 class="page-title">⚙️ Settings</h2></div>
+      <div class="card"><div class="section-h">🎓 Semester Management</div><div id="sem-management-content"></div></div>
       <div class="card"><div class="section-h">👤 Profile</div><div id="settings-profile-form"></div></div>
+      <div class="card">
+        <div class="section-actions"><span class="section-h">📊 Initial Attendance (mid-semester onboarding)</span></div>
+        <p style="font-size:.78rem;color:var(--text2);margin-bottom:10px">If you're starting mid-semester, set your already-attended counts here so percentages are correct from day one.</p>
+        <div id="initial-data-form"></div>
+        <button class="btn btn-primary" style="margin-top:10px" onclick="window.__att.saveInitialData()">💾 Save Initial Data</button>
+      </div>
+      <div class="card">
+        <div class="section-actions"><span class="section-h">🏖️ Holiday Management</span>
+          <button class="btn btn-purple" onclick="window.__att.openAddHoliday()" style="font-size:.78rem;padding:6px 14px">+ Add Holiday</button></div>
+        <div id="holiday-mgmt-list"></div>
+      </div>
+      <div class="card">
+        <div class="section-h">🔔 Notification Controls</div>
+        <div class="notif-option">
+          <div><div class="notif-label">Low Attendance Alerts</div><div class="notif-desc">Notify when any subject drops below 75%</div></div>
+          <label class="toggle-switch"><input type="checkbox" id="notif-low-toggle" onchange="localStorage.setItem('dash_notif_low', this.checked)"><span class="toggle-slider"></span></label>
+        </div>
+        <button class="btn" style="margin-top:10px" onclick="window.__att.enableBrowserNotif()">🔔 Enable Browser Notifications</button>
+      </div>
+      <div class="card">
+        <div class="section-h">🎨 Appearance</div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px">
+          <button class="btn" data-theme-option="dark" onclick="setThemeMode('dark')">🌙 Dark</button>
+          <button class="btn" data-theme-option="light" onclick="setThemeMode('light')">☀️ Light</button>
+          <button class="btn" data-theme-option="system" onclick="setThemeMode('system')">💻 System</button>
+        </div>
+      </div>
       <div class="card"><div class="section-h">🔐 Security</div>
         <p style="font-size:.82rem;color:var(--text2)">Signed in as <strong id="settings-user-email">—</strong>. This app has no public sign-up — only one account can ever exist (see README).</p>
         <button class="btn btn-danger" onclick="logoutApp()">Sign Out</button>
       </div>
+      <div class="card">
+        <div class="section-h">🗑️ Danger Zone</div>
+        <p style="font-size:.82rem;color:var(--text2);margin-bottom:14px">These actions are irreversible. Use with caution.</p>
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <button class="btn btn-danger" onclick="window.__att.clearHistory()">Clear All History</button>
+          <button class="btn" onclick="window.__att.exportCSV()">📤 Export Data (CSV)</button>
+        </div>
+      </div>
     </div>
   </main>
+</div>
+
+<div id="wizard-overlay">
+  <div class="wizard-modal">
+    <div class="wizard-header">
+      <div class="wizard-title">🎓 Semester Setup</div>
+      <div class="wizard-subtitle" id="wizard-subtitle">Step 1 of 4</div>
+      <div class="wizard-steps" id="wizard-steps-indicator"></div>
+    </div>
+    <div class="wizard-body" id="wizard-content"></div>
+    <div class="wizard-footer" id="wizard-footer"></div>
+  </div>
+</div>
+
+<div id="holiday-modal">
+  <div class="holiday-modal-box">
+    <div class="holiday-modal-header"><h3>🏖 Mark Holiday</h3>
+      <button class="holiday-modal-close" onclick="window.__att.closeHolidayModal()">✕</button></div>
+    <div class="holiday-modal-body">
+      <div class="wizard-field"><label class="wizard-label">Holiday Name / Reason *</label>
+        <input id="holiday-name-input" class="cute-input" type="text" placeholder="e.g. Diwali, College Event..." oninput="window.__att.updateHolidayPreview()"></div>
+      <div class="wizard-field"><label class="wizard-label">Date</label>
+        <input id="holiday-date-display" class="cute-input" type="date" readonly style="opacity:.7"></div>
+      <div class="holiday-preview" id="holiday-preview" style="display:none">
+        <span>🏖</span><span id="holiday-preview-text">—</span></div>
+    </div>
+    <div class="holiday-modal-footer">
+      <button class="btn" onclick="window.__att.closeHolidayModal()">Cancel</button>
+      <button class="btn btn-purple" onclick="window.__att.submitHolidayMark()">🏖 Mark as Holiday</button>
+    </div>
+  </div>
+</div>
+
+<div id="end-sem-modal">
+  <div class="end-sem-box">
+    <h2>⚠️ End Current Semester?</h2>
+    <p id="end-sem-msg">This will archive the current semester's records.</p>
+    <div style="display:flex;gap:12px;justify-content:flex-end">
+      <button class="btn" onclick="window.__att.closeEndSemModal()">Cancel</button>
+      <button class="btn btn-danger" onclick="window.__att.confirmEndSem()">Archive & Start New</button>
+    </div>
+  </div>
 </div>
 <nav id="bottom-nav">
   <div class="bnav-item active" data-page="dashboard">🏠<span>Home</span></div>

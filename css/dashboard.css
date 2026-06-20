@@ -321,3 +321,7 @@
 /* ── Result Tracker / Backlog (new) ─────────────────── */
 .backlog-row{display:grid;grid-template-columns:1fr 80px 80px 28px;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)}
 .backlog-row:last-child{border-bottom:none}
+
+/* ── Theme Selector buttons (Settings page) ──────────── */
+[data-theme-option]{flex:1;min-width:100px}
+[data-theme-option].active{border-color:var(--primary);color:var(--primary);background:rgba(0,212,255,0.1)}

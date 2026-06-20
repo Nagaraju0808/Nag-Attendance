@@ -36,20 +36,35 @@ export function closeSidebar() {
 }
 
 export function loadTheme() {
-  const saved = localStorage.getItem('dashboard_theme') || 'dark';
-  document.documentElement.setAttribute('data-theme', saved);
-  updateThemeBtn(saved);
+  const saved = localStorage.getItem('dashboard_theme') || 'system';
+  applyTheme(saved);
+}
+export function setTheme(mode) {
+  localStorage.setItem('dashboard_theme', mode);
+  applyTheme(mode);
 }
 export function toggleTheme() {
-  const cur = document.documentElement.getAttribute('data-theme') || 'dark';
-  const next = cur === 'dark' ? 'light' : 'dark';
-  document.documentElement.setAttribute('data-theme', next);
-  localStorage.setItem('dashboard_theme', next);
-  updateThemeBtn(next);
+  const cur = localStorage.getItem('dashboard_theme') || 'system';
+  const next = cur === 'dark' ? 'light' : cur === 'light' ? 'system' : 'dark';
+  setTheme(next);
 }
-function updateThemeBtn(theme) {
+function applyTheme(mode) {
+  const resolved = mode === 'system'
+    ? (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+    : mode;
+  document.documentElement.setAttribute('data-theme', resolved);
+  updateThemeBtn(mode, resolved);
+}
+function updateThemeBtn(mode, resolved) {
   const btn = document.getElementById('theme-toggle-btn');
-  if (btn) btn.innerHTML = theme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
+  if (btn) btn.innerHTML = mode === 'system' ? `💻 System (${resolved})` : resolved === 'dark' ? '🌙 Dark Mode' : '☀️ Light Mode';
+  document.querySelectorAll('[data-theme-option]').forEach(b => b.classList.toggle('active', b.dataset.themeOption === mode));
+}
+// React to OS theme changes live when in "system" mode
+if (window.matchMedia) {
+  window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
+    if ((localStorage.getItem('dashboard_theme') || 'system') === 'system') applyTheme('system');
+  });
 }
 
 export function $(id) { return document.getElementById(id); }
