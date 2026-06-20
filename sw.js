@@ -1,9 +1,21 @@
-const CACHE_NAME = 'nagaraju-attendance-v1';
+const CACHE_NAME = 'academic-dashboard-v2';
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
-  './icon.svg'
+  './assets/icon.svg',
+  './css/style.css',
+  './css/dashboard.css',
+  './css/responsive.css',
+  './js/app.js',
+  './js/ui.js',
+  './js/auth.js',
+  './js/profile.js',
+  './js/attendance.js',
+  './js/result-tracker.js',
+  './js/calendar.js',
+  './js/charts.js',
+  './js/supabase-client.js'
 ];
 
 self.addEventListener('install', e => {
@@ -21,16 +33,19 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  // Network-first for API calls, cache-first for static assets
-  if (e.request.url.includes('supabase.co')) {
+  const url = e.request.url;
+
+  // Never cache config.js (it carries env-derived values) or Supabase calls.
+  if (url.includes('config.js') || url.includes('supabase.co')) {
     e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
-  } else {
-    e.respondWith(
-      caches.match(e.request).then(cached => cached || fetch(e.request).then(resp => {
-        const clone = resp.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
-        return resp;
-      }))
-    );
+    return;
   }
+
+  e.respondWith(
+    caches.match(e.request).then(cached => cached || fetch(e.request).then(resp => {
+      const clone = resp.clone();
+      caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
+      return resp;
+    }))
+  );
 });
