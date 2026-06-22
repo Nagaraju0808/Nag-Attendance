@@ -341,6 +341,16 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
 .holiday-modal-close:hover{background:rgba(255,51,102,0.15);border-color:rgba(255,51,102,0.4);color:var(--absent)}
 .holiday-modal-body{padding:22px 26px}
 .holiday-modal-footer{padding:0 26px 22px;display:flex;gap:10px;justify-content:flex-end}
+
+/* Edit Timetable Modal */
+#edit-tt-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:3000;align-items:center;justify-content:center;padding:20px}
+#edit-tt-modal.show{display:flex}
+.edit-tt-box{background:var(--bg2);border:1px solid rgba(0,212,255,0.35);border-radius:20px;width:100%;max-width:640px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,0.6);overflow:hidden;animation:fadeIn 0.25s ease}
+.edit-tt-header{padding:22px 26px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-shrink:0}
+.edit-tt-header h3{font-family:'Orbitron',sans-serif;font-size:1rem;font-weight:700;background:linear-gradient(135deg,#00d4ff,#00ff88);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.edit-tt-body{padding:18px 26px;overflow-y:auto;flex:1}
+.edit-tt-footer{padding:14px 26px 22px;display:flex;gap:10px;justify-content:flex-end;border-top:1px solid var(--border);flex-shrink:0}
+[data-theme="light"] .edit-tt-box{background:#fff}
 .holiday-preview{padding:12px 14px;border-radius:10px;background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.2);margin-top:14px;display:flex;align-items:center;gap:10px;font-size:0.82rem;color:#c084fc;font-weight:600}
 
 /* ── Calendar ─────────────────────────────── */
@@ -655,9 +665,12 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
 
 <!-- ═══════════ TIMETABLE ═══════════ -->
 <div id="section-timetable" class="section">
-  <div class="page-header">
-    <h2 class="page-title">📋 <span>Weekly Timetable</span></h2>
-    <p class="page-sub" id="tt-page-sub">GCET • CSE-DS B-Section B1 Batch</p>
+  <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px">
+    <div>
+      <h2 class="page-title">📋 <span>Weekly Timetable</span></h2>
+      <p class="page-sub" id="tt-page-sub">GCET • CSE-DS B-Section B1 Batch</p>
+    </div>
+    <button class="btn btn-primary" onclick="openEditTimetableModal()" style="font-size:0.8rem;padding:8px 16px;white-space:nowrap">✏️ Edit Timetable</button>
   </div>
   <div class="card" style="margin-bottom:20px">
     <div class="timetable-wrap">
@@ -765,6 +778,15 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
     </div>
   </div>
 
+  <!-- Timetable Management -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="section-actions">
+      <span class="section-h">📋 Timetable Management</span>
+      <button class="btn btn-primary" onclick="openEditTimetableModal()" style="font-size:0.78rem;padding:6px 14px">✏️ Edit Timetable</button>
+    </div>
+    <p style="font-size:0.8rem;color:var(--text2)">Fix wrong subjects/periods in your weekly timetable for the active semester. Changes save directly to the database.</p>
+  </div>
+
   <!-- Holiday Management -->
   <div class="card" style="margin-bottom:20px">
     <div class="section-actions">
@@ -857,6 +879,21 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
   </div>
 </div>
 
+<!-- ═══════════ EDIT TIMETABLE MODAL ═══════════ -->
+<div id="edit-tt-modal">
+  <div class="edit-tt-box">
+    <div class="edit-tt-header">
+      <h3>✏️ Edit Weekly Timetable</h3>
+      <button class="holiday-modal-close" onclick="closeEditTimetableModal()">✕</button>
+    </div>
+    <div class="edit-tt-body" id="edit-tt-body"></div>
+    <div class="edit-tt-footer">
+      <button class="btn" onclick="closeEditTimetableModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditTimetable()">💾 Save Changes</button>
+    </div>
+  </div>
+</div>
+
 
 <div id="end-sem-modal">
   <div class="end-sem-box">
@@ -915,6 +952,7 @@ let activeSemester = null;
 let ACTIVE_SUBJECTS  = {};           // set from DB or fallback
 let ACTIVE_TIMETABLE = {};           // set from DB or fallback
 let initialData = {};
+let editTTDraft = {};
 let attendanceRecords = [];
 let charts = {};
 let currentPage = 'dashboard';
@@ -1978,6 +2016,149 @@ function renderTimetable() {
       <td><span style="font-family:'Orbitron',sans-serif;font-size:0.85rem;color:var(--primary)">${sub.pw}</span></td>
     </tr>`
   ).join('');
+}
+
+// ══════════════════════════════════════════
+//  EDIT TIMETABLE (existing active semester)
+// ══════════════════════════════════════════
+function openEditTimetableModal() {
+  if (!activeSemester) {
+    showToast('No active semester found — set up a semester first', 'error');
+    return;
+  }
+  if (Object.keys(ACTIVE_SUBJECTS).length === 0) {
+    showToast('No subjects configured for this semester', 'error');
+    return;
+  }
+  // Deep-copy current timetable into the draft
+  const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  editTTDraft = {};
+  days.forEach(d => {
+    editTTDraft[d] = (ACTIVE_TIMETABLE[d] || []).map(p => ({ ...p }));
+  });
+  document.getElementById('edit-tt-body').innerHTML = _editTTBodyHTML();
+  document.getElementById('edit-tt-modal').classList.add('show');
+}
+
+function closeEditTimetableModal() {
+  document.getElementById('edit-tt-modal').classList.remove('show');
+}
+
+function _editTTSubOpts(selected) {
+  let opts = `<option value="">— None —</option>`;
+  Object.entries(ACTIVE_SUBJECTS).forEach(([key, s]) => {
+    opts += `<option value="${key}" ${key===selected?'selected':''}>${key} – ${(s.name||'').split(' ').slice(0,3).join(' ')}</option>`;
+  });
+  return opts;
+}
+
+function _editTTBodyHTML() {
+  const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  return `<p style="font-size:0.8rem;color:var(--text2);margin-bottom:14px">Fix subjects/periods below, then save. This updates <strong>${activeSemester.name}</strong> directly in the database.</p>` +
+  days.map(day => `
+    <div class="wizard-tt-day">
+      <div class="wizard-tt-day-hd">
+        <span class="wizard-tt-day-name">${day.toUpperCase()}</span>
+        <button class="tt-add-btn" onclick="_addEditTTPeriod('${day}')">+ Add Period</button>
+      </div>
+      <div class="wizard-tt-periods" id="edit-tt-${day}" style="display:flex;flex-direction:column;gap:8px;padding:10px 16px">
+        ${(editTTDraft[day]||[]).map((p,i) => _editTTPeriodRowHTML(day,i,p)).join('')}
+      </div>
+    </div>`).join('');
+}
+
+function _editTTPeriodRowHTML(day, i, p) {
+  const periodOpts = [1,2,3,4,5,6].map(n =>
+    `<option value="${n}" ${p.period===n?'selected':''}>${n}</option>`
+  ).join('');
+  return `<div class="wizard-tt-period-row" id="edit-tt-row-${day}-${i}">
+    <span style="font-size:0.78rem;color:var(--text2);width:20px">P</span>
+    <select onchange="editTTDraft['${day}'][${i}].period=parseInt(this.value);editTTDraft['${day}'][${i}].time=({1:'09:00-09:55',2:'09:55-10:50',3:'10:50-11:45',4:'11:45-12:40',5:'01:30-02:25',6:'02:25-03:20'})[parseInt(this.value)]||''" style="width:60px">${periodOpts}</select>
+    <select onchange="editTTDraft['${day}'][${i}].subject=this.value" style="flex:1">${_editTTSubOpts(p.subject)}</select>
+    <button class="tt-rem-btn" onclick="_removeEditTTPeriod('${day}',${i})">✕</button>
+  </div>`;
+}
+
+function _addEditTTPeriod(day) {
+  if (!editTTDraft[day]) editTTDraft[day] = [];
+  const usedPeriods = editTTDraft[day].map(p => p.period);
+  const nextPeriod = [1,2,3,4,5,6].find(n => !usedPeriods.includes(n)) || 1;
+  editTTDraft[day].push({ period: nextPeriod, time: PERIOD_TIMES[nextPeriod], subject: '' });
+  const container = document.getElementById(`edit-tt-${day}`);
+  if (container) {
+    container.innerHTML = editTTDraft[day].map((p, i) => _editTTPeriodRowHTML(day, i, p)).join('');
+  }
+}
+
+function _removeEditTTPeriod(day, i) {
+  editTTDraft[day].splice(i, 1);
+  const container = document.getElementById(`edit-tt-${day}`);
+  if (container) {
+    container.innerHTML = editTTDraft[day].map((p, idx) => _editTTPeriodRowHTML(day, idx, p)).join('');
+  }
+}
+
+function _collectEditTTFromDOM() {
+  const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  days.forEach(day => {
+    const container = document.getElementById(`edit-tt-${day}`);
+    if (!container) return;
+    editTTDraft[day] = [];
+    container.querySelectorAll('.wizard-tt-period-row').forEach(row => {
+      const selects = row.querySelectorAll('select');
+      if (selects.length >= 2) {
+        const p = parseInt(selects[0].value);
+        const s = selects[1].value;
+        if (p && s) editTTDraft[day].push({ period: p, time: PERIOD_TIMES[p] || '', subject: s });
+      }
+    });
+  });
+}
+
+async function saveEditTimetable() {
+  if (!activeSemester) { showToast('No active semester found', 'error'); return; }
+  _collectEditTTFromDOM();
+
+  // Validate: no duplicate periods within a day
+  for (const day of Object.keys(editTTDraft)) {
+    const periods = editTTDraft[day].map(p => p.period);
+    if (new Set(periods).size !== periods.length) {
+      showToast(`Duplicate period numbers in ${day} — fix before saving`, 'error');
+      return;
+    }
+  }
+
+  const ttRows = [];
+  Object.entries(editTTDraft).forEach(([day, periods]) => {
+    periods.forEach(p => {
+      if (p.subject) ttRows.push({ semester_id: activeSemester.id, day, period: p.period, time_slot: p.time || PERIOD_TIMES[p.period] || '', subject_key: p.subject });
+    });
+  });
+
+  try {
+    const { error: delErr } = await db.from('semester_timetable').delete().eq('semester_id', activeSemester.id);
+    if (delErr) throw delErr;
+
+    if (ttRows.length > 0) {
+      const { error: insErr } = await db.from('semester_timetable').insert(ttRows);
+      if (insErr) throw insErr;
+    }
+
+    // Update in-memory state to match
+    ACTIVE_TIMETABLE = {};
+    ttRows.forEach(t => {
+      if (!ACTIVE_TIMETABLE[t.day]) ACTIVE_TIMETABLE[t.day] = [];
+      ACTIVE_TIMETABLE[t.day].push({ period: t.period, time: t.time_slot, subject: t.subject_key });
+    });
+    Object.keys(ACTIVE_TIMETABLE).forEach(d => ACTIVE_TIMETABLE[d].sort((a,b) => a.period - b.period));
+
+    closeEditTimetableModal();
+    if (currentPage === 'timetable') renderTimetable();
+    showToast('Timetable updated ✓', 'success');
+  } catch (e) {
+    console.error('saveEditTimetable error:', e);
+    showToast('Failed to save timetable: ' + (e.message || 'unknown error'), 'error');
+  }
 }
 
 // ══════════════════════════════════════════
