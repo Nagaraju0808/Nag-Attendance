@@ -2515,7 +2515,7 @@ function renderSettings() {
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
           <input type="date" id="sem-end-date-input" value="${activeSemester.end_date}"
             style="background:var(--bg3);border:1px solid rgba(168,85,247,0.3);border-radius:8px;padding:10px 14px;color:var(--text);font-family:'Nunito',sans-serif;font-size:0.9rem;color-scheme:dark;flex:1;max-width:220px">
-          <button class="btn btn-primary" onclick="updateSemEndDate()" style="white-space:nowrap;background:rgba(168,85,247,0.15);border-color:rgba(168,85,247,0.4);color:#c084fc">💾 Save End Date</button>
+          <button class="btn btn-primary" id="sem-end-save-btn" onclick="updateSemEndDate()" style="white-space:nowrap;background:rgba(168,85,247,0.15);border-color:rgba(168,85,247,0.4);color:#c084fc">💾 Save End Date</button>
         </div>
       </div>
       <div style="font-size:0.8rem;color:var(--text2)">Total semesters: <strong style="color:var(--text)">${allSemesters.length}</strong> • Completed: <strong style="color:var(--text)">${allSemesters.filter(s=>s.status==='completed').length}</strong></div>`;
@@ -2548,26 +2548,51 @@ async function updateSemEndDate() {
   if (!newDate) return showToast('Please select a date', 'error');
   if (newDate < activeSemester.start_date) return showToast(`End date (${newDate}) must be on or after start date (${activeSemester.start_date})`, 'error');
 
-  const { error } = await db.from('semesters').update({ end_date: newDate }).eq('id', activeSemester.id);
-  if (error) { showToast('Failed to update: ' + error.message, 'error'); return; }
+  const saveBtn = document.getElementById('sem-end-save-btn');
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = '⏳ Saving...'; }
 
-  activeSemester.end_date = newDate;
-  allSemesters = allSemesters.map(s => s.id === activeSemester.id ? { ...s, end_date: newDate } : s);
+  try {
+    // IMPORTANT: chain .select() so we get back the row that was actually
+    // written. Without this, Supabase can silently update 0 rows (e.g. if a
+    // Row Level Security policy blocks the write) without returning an
+    // error — the old value then reappears after any refresh, even though
+    // the UI looked like it saved.
+    const { data, error } = await db.from('semesters')
+      .update({ end_date: newDate })
+      .eq('id', activeSemester.id)
+      .select();
 
-  // Update display
-  const dispEl = document.getElementById('sem-end-display');
-  if (dispEl) dispEl.textContent = newDate;
-  const today = new Date().toISOString().split('T')[0];
-  const daysLeft = Math.max(0, Math.round((new Date(newDate) - new Date(today)) / 86400000));
-  const expired  = newDate < today;
-  const daysEl = document.getElementById('sem-days-left');
-  if (daysEl) {
-    daysEl.textContent = expired ? '⚠️ Semester has ended' : daysLeft + ' days remaining';
-    daysEl.style.color = expired ? 'var(--absent)' : daysLeft < 30 ? 'var(--warning)' : 'var(--present)';
+    if (error) throw error;
+    if (!data || data.length === 0) {
+      throw new Error('No rows were updated. This usually means a Supabase Row Level Security (RLS) policy on the "semesters" table is blocking updates for this key — check the UPDATE policy for that table.');
+    }
+
+    const saved = data[0];
+    // Sync local state from the confirmed DB row, not an assumption.
+    activeSemester.end_date = saved.end_date;
+    allSemesters = allSemesters.map(s => s.id === activeSemester.id ? { ...s, end_date: saved.end_date } : s);
+
+    // Update display
+    input.value = saved.end_date;
+    const dispEl = document.getElementById('sem-end-display');
+    if (dispEl) dispEl.textContent = saved.end_date;
+    const today = new Date().toISOString().split('T')[0];
+    const daysLeft = Math.max(0, Math.round((new Date(saved.end_date) - new Date(today)) / 86400000));
+    const expired  = saved.end_date < today;
+    const daysEl = document.getElementById('sem-days-left');
+    if (daysEl) {
+      daysEl.textContent = expired ? '⚠️ Semester has ended' : daysLeft + ' days remaining';
+      daysEl.style.color = expired ? 'var(--absent)' : daysLeft < 30 ? 'var(--warning)' : 'var(--present)';
+    }
+
+    checkSemesterExpiry();
+    showToast('✅ End date updated to ' + saved.end_date, 'success');
+  } catch (e) {
+    console.error('updateSemEndDate error:', e);
+    showToast('Failed to update: ' + (e.message || 'unknown error'), 'error');
+  } finally {
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = '💾 Save End Date'; }
   }
-
-  checkSemesterExpiry();
-  showToast('✅ End date updated to ' + newDate, 'success');
 }
 
 async function saveInitialData() {
