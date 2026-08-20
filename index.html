@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#00d4ff">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -11,7 +11,7 @@
 <title>Nagaraju Attendance</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Nunito:wght@300;400;600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
 :root {
@@ -486,6 +486,70 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
   .grid-3{grid-template-columns:1fr}
   .history-day{display:none}
 }
+/* ═══ GitHub-Style Heatmap Calendar ═══ */
+.heatmap-container { padding: 16px; overflow-x: auto; }
+.heatmap-scroll { display: inline-flex; flex-direction: column; gap: 4px; min-width: 100%; }
+.heatmap-months { display: flex; gap: 0; margin-left: 36px; margin-bottom: 4px; font-size: 0.7rem; color: var(--muted); }
+.heatmap-months span { text-align: left; }
+.heatmap-body { display: flex; gap: 4px; }
+.heatmap-day-labels { display: flex; flex-direction: column; gap: 2px; margin-right: 4px; }
+.heatmap-day-labels span { height: 14px; line-height: 14px; font-size: 0.6rem; color: var(--muted); text-align: right; width: 28px; }
+.heatmap-grid { display: flex; gap: 2px; }
+.heatmap-week { display: flex; flex-direction: column; gap: 2px; }
+.heatmap-cell { width: 14px; height: 14px; border-radius: 2px; cursor: pointer; position: relative; transition: transform 0.15s, outline 0.15s; }
+.heatmap-cell:hover { transform: scale(1.8); z-index: 10; outline: 2px solid var(--primary); }
+.heatmap-cell.lvl-0 { background: var(--glass); }
+.heatmap-cell.lvl-1 { background: #ff3366; }
+.heatmap-cell.lvl-2 { background: #ffbb00; }
+.heatmap-cell.lvl-3 { background: #30a14e; }
+.heatmap-cell.lvl-4 { background: #216e39; }
+.heatmap-cell.lvl-holiday { background: #a855f7; }
+.heatmap-cell.lvl-future { background: rgba(255,255,255,0.03); }
+.heatmap-cell.lvl-sunday { background: transparent; }
+.heatmap-tooltip { position: fixed; background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 6px 10px; border-radius: 6px; font-size: 0.72rem; pointer-events: none; z-index: 999; white-space: nowrap; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+.heatmap-legend { display: flex; align-items: center; gap: 4px; margin-top: 12px; margin-left: 36px; font-size: 0.65rem; color: var(--muted); }
+.heatmap-legend-cell { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
+.heatmap-stats { display: flex; gap: 16px; margin-top: 12px; margin-left: 36px; flex-wrap: wrap; }
+.heatmap-stats .hm-stat { font-size: 0.75rem; color: var(--muted); }
+.heatmap-stats .hm-stat strong { color: var(--text); font-family: 'Orbitron', monospace; }
+@media(max-width:768px) {
+  .heatmap-cell { width: 11px; height: 11px; }
+  .heatmap-legend-cell { width: 10px; height: 10px; }
+  .heatmap-day-labels span { font-size: 0.5rem; width: 22px; }
+  .heatmap-months { margin-left: 26px; font-size: 0.6rem; }
+  .heatmap-legend { margin-left: 26px; }
+  .heatmap-stats { margin-left: 26px; }
+}
+
+/* ═══ Toast Close Button ═══ */
+.toast-item { position: relative; padding-right: 28px; }
+.toast-close { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: none; border: none; color: inherit; font-size: 1rem; cursor: pointer; opacity: 0.7; padding: 2px 4px; line-height: 1; }
+.toast-close:hover { opacity: 1; }
+
+/* ═══ Skeleton Loading ═══ */
+.skeleton-card { background: var(--glass); border-radius: 12px; padding: 20px; }
+.skeleton-line { height: 14px; background: linear-gradient(90deg, var(--glass) 25%, var(--glass2) 50%, var(--glass) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 6px; margin-bottom: 10px; }
+.skeleton-line.w60 { width: 60%; }
+.skeleton-line.w80 { width: 80%; }
+.skeleton-line.w40 { width: 40%; }
+.skeleton-line.tall { height: 40px; }
+
+/* ═══ Clear History Confirm Modal ═══ */
+.confirm-delete-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+.confirm-delete-box { background: var(--bg2); border: 1px solid #ff3366; border-radius: 16px; padding: 28px; max-width: 400px; width: 90%; text-align: center; }
+.confirm-delete-box h3 { color: #ff3366; margin-bottom: 12px; }
+.confirm-delete-box p { color: var(--muted); font-size: 0.85rem; margin-bottom: 16px; }
+.confirm-delete-box input { width: 100%; padding: 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'Orbitron', monospace; text-align: center; font-size: 1rem; letter-spacing: 3px; margin-bottom: 16px; }
+.confirm-delete-box .btn-row { display: flex; gap: 10px; justify-content: center; }
+
+/* ═══ Keyboard Shortcut Help Modal ═══ */
+.kbd-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+.kbd-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 16px; padding: 28px; max-width: 420px; width: 90%; }
+.kbd-box h3 { color: var(--primary); margin-bottom: 16px; text-align: center; }
+.kbd-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--glass); }
+.kbd-row:last-child { border-bottom: none; }
+.kbd-key { background: var(--glass2); border: 1px solid var(--border); border-radius: 4px; padding: 2px 8px; font-family: 'Orbitron', monospace; font-size: 0.75rem; color: var(--primary); }
+.kbd-desc { color: var(--muted); font-size: 0.8rem; }
 </style>
 </head>
 <body>
@@ -501,6 +565,7 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
 <div id="app" style="display:none">
 <!-- Sidebar -->
 <nav id="sidebar">
+  <button class="sidebar-close" onclick="closeSidebar()" aria-label="Close menu" style="position:absolute;top:16px;right:16px;background:none;border:none;color:var(--text);font-size:1.2rem;cursor:pointer;display:none;">✕</button>
   <div class="sidebar-logo">
     <h1>NAGARAJU<br>ATTENDANCE</h1>
     <p>GCET • CSE-DS • B-Section</p>
@@ -538,7 +603,7 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
 <div id="section-dashboard" class="section active">
   <div class="page-header">
     <div style="display:flex;align-items:center;gap:12px">
-      <button class="btn" onclick="toggleSidebar()" style="display:none;padding:8px 12px" id="menu-btn">☰</button>
+      <button class="btn" onclick="toggleSidebar()" style="display:none;padding:8px 12px" id="menu-btn" aria-label="Open menu">☰</button>
       <div>
         <h2 class="page-title">Welcome back, <span>Nagaraju!</span></h2>
         <p class="page-sub" id="dash-date"></p>
@@ -668,27 +733,38 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
 <!-- ═══════════ CALENDAR ═══════════ -->
 <div id="section-calendar" class="section">
   <div class="page-header">
-    <h2 class="page-title">📅 <span>Attendance Calendar</span></h2>
-    <p class="page-sub">Monthly view of your attendance patterns</p>
+    <h2 class="page-title">📅 <span>Attendance Heatmap</span></h2>
+    <p class="page-sub">GitHub-style overview of your attendance patterns</p>
   </div>
   <div class="card" style="margin-bottom:20px">
-    <div class="calendar-nav">
-      <button class="calendar-nav-btn" onclick="calendarPrev()">← Prev</button>
-      <div style="text-align:center">
-        <div class="calendar-month-title" id="calendar-month-title">—</div>
+    <div class="heatmap-container">
+      <div class="heatmap-scroll">
+        <div class="heatmap-months" id="heatmap-months"></div>
+        <div class="heatmap-body">
+          <div class="heatmap-day-labels">
+            <span>&nbsp;</span>
+            <span>Mon</span>
+            <span>Tue</span>
+            <span>Wed</span>
+            <span>Thu</span>
+            <span>Fri</span>
+            <span>Sat</span>
+          </div>
+          <div class="heatmap-grid" id="heatmap-grid"></div>
+        </div>
       </div>
-      <div style="display:flex;gap:8px">
-        <button class="calendar-nav-btn" onclick="calendarToday()" style="font-size:0.78rem;padding:6px 12px">Today</button>
-        <button class="calendar-nav-btn" onclick="calendarNext()">Next →</button>
+      <div class="heatmap-legend">
+        <span>Less</span>
+        <span class="heatmap-legend-cell" style="background:var(--glass)"></span>
+        <span class="heatmap-legend-cell" style="background:#ff3366"></span>
+        <span class="heatmap-legend-cell" style="background:#ffbb00"></span>
+        <span class="heatmap-legend-cell" style="background:#30a14e"></span>
+        <span class="heatmap-legend-cell" style="background:#216e39"></span>
+        <span>More</span>
+        <span style="margin-left:12px" class="heatmap-legend-cell" style="background:#a855f7"></span>
+        <span>Holiday</span>
       </div>
-    </div>
-    <div class="calendar-grid" id="calendar-grid"></div>
-    <div class="calendar-legend">
-      <div class="calendar-legend-item"><div class="calendar-legend-dot" style="background:rgba(0,255,136,0.5)"></div> 100% Present</div>
-      <div class="calendar-legend-item"><div class="calendar-legend-dot" style="background:rgba(255,187,0,0.5)"></div> Partial</div>
-      <div class="calendar-legend-item"><div class="calendar-legend-dot" style="background:rgba(255,51,102,0.5)"></div> Low/Absent</div>
-      <div class="calendar-legend-item"><div class="calendar-legend-dot" style="background:rgba(168,85,247,0.5)"></div> Holiday</div>
-      <div class="calendar-legend-item"><div class="calendar-legend-dot" style="border:2px solid var(--primary);background:transparent"></div> Today</div>
+      <div class="heatmap-stats" id="heatmap-stats"></div>
     </div>
   </div>
   <div id="calendar-day-detail"></div>
@@ -850,6 +926,8 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
     <div style="display:flex;gap:12px;flex-wrap:wrap">
       <button class="btn btn-danger" onclick="clearHistory()">Clear All History</button>
       <button class="btn" onclick="exportData()">📤 Export Data</button>
+      <button class="btn" onclick="exportFullBackup()" style="background:var(--glass);margin-top:8px">📦 Full JSON Backup</button>
+      <button class="btn" onclick="importBackup()" style="background:var(--glass);margin-top:8px">📥 Import Backup</button>
     </div>
   </div>
 </div>
@@ -858,7 +936,7 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
 </div>
 
 <!-- Bottom nav -->
-<nav id="bottom-nav">
+<nav id="bottom-nav" role="navigation" aria-label="Main navigation">
   <div class="bnav-item active" onclick="navigate('dashboard')" data-page="dashboard"><div class="bnav-icon">🏠</div><span>Home</span></div>
   <div class="bnav-item" onclick="navigate('mark')" data-page="mark"><div class="bnav-icon">✅</div><span>Mark</span></div>
   <div class="bnav-item" onclick="navigate('calendar')" data-page="calendar"><div class="bnav-icon">📅</div><span>Calendar</span></div>
@@ -937,12 +1015,19 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
   </div>
 </div>
 
-<div id="toast"></div>
+<div id="toast" aria-live="polite" role="status"></div>
 
 <script>
 // ══════════════════════════════════════════
 //  CONSTANTS — FALLBACK DEFAULTS (legacy semester)
 // ══════════════════════════════════════════
+// ═══ HTML Sanitization Helper ═══
+function escapeHTML(str) {
+  if (str === null || str === undefined) return '';
+  const div = document.createElement('div');
+  div.textContent = String(str);
+  return div.innerHTML;
+}
 const SUPABASE_URL = 'https://nogzeebpyewftcxbnjax.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5vZ3plZWJweWV3ZnRjeGJuamF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MDgxMjIsImV4cCI6MjA4ODI4NDEyMn0.MNM7K7GdRXumGyq1kK7F9b9O8lYZTfRiC9NP13GU_vw';
 
@@ -1082,7 +1167,7 @@ function updateSidebarSemBadge(name, status) {
   const el = document.getElementById('sidebar-sem-badge');
   if (!el) return;
   const statusIcon = status === 'active' ? '🟢' : status === 'completed' ? '✅' : status === 'Legacy Mode' ? '⚙️' : '🔵';
-  el.innerHTML = `${statusIcon} <strong>${name}</strong>`;
+  el.innerHTML = `${statusIcon} <strong>${escapeHTML(name)}</strong>`;
 }
 
 // ══════════════════════════════════════════
@@ -1104,8 +1189,9 @@ async function loadData() {
   });
 
   // Attendance records
-  let query = db.from('attendance_records').select('*').order('date', { ascending: false });
-  const { data: records, error: recErr } = await query;
+  let query = db.from('attendance_records').select('*');
+  if (activeSemester) query = query.eq('semester_id', activeSemester.id);
+  const { data: records, error: recErr } = await query.order('date', { ascending: false });
   if (!recErr && records) {
     if (activeSemester) {
       attendanceRecords = records.filter(r =>
@@ -1129,7 +1215,7 @@ function checkSemesterExpiry() {
     bannerEl.style.display = 'block';
     bannerEl.innerHTML = `
       <div class="expiry-banner">
-        ⏰ Your semester <strong>${activeSemester.name}</strong> ended on ${activeSemester.end_date}.
+        ⏰ Your semester <strong>${escapeHTML(activeSemester.name)}</strong> ended on ${activeSemester.end_date}.
         Archive it to start your new semester.
         <button onclick="openEndSemModal()">Archive & Start New →</button>
       </div>`;
@@ -1142,7 +1228,7 @@ function checkSemesterExpiry() {
 function openEndSemModal() {
   if (!activeSemester) return;
   document.getElementById('end-sem-msg').innerHTML =
-    `This will mark <strong style="color:#c084fc">${activeSemester.name}</strong> as <strong>Completed</strong> and archive all its attendance records.<br><br>You can view archived data any time in <em>History → Archive</em>.<br><br>After archiving, the <strong>New Semester Setup Wizard</strong> will launch automatically.`;
+    `This will mark <strong style="color:#c084fc">${escapeHTML(activeSemester.name)}</strong> as <strong>Completed</strong> and archive all its attendance records.<br><br>You can view archived data any time in <em>History → Archive</em>.<br><br>After archiving, the <strong>New Semester Setup Wizard</strong> will launch automatically.`;
   document.getElementById('end-sem-modal').classList.add('show');
 }
 
@@ -1879,14 +1965,18 @@ function renderDashboard() {
     </div>`;
   }).join('');
 
-  if (charts.donut) charts.donut.destroy();
-  charts.donut = new Chart(document.getElementById('donutChart').getContext('2d'), {
-    type:'doughnut',
-    data:{ labels:['Present','Absent'], datasets:[{ data:[overall.present,overall.absent], backgroundColor:['#00ff88','#ff3366'], borderWidth:0, hoverOffset:4 }] },
-    options:{ cutout:'72%', responsive:true, maintainAspectRatio:true,
-      plugins:{ legend:{ position:'bottom', labels:{ color:'#8899bb', font:{ size:12, family:'Nunito' }, padding:20 } },
-        tooltip:{ callbacks:{ label:c=>` ${c.label}: ${c.raw} (${overall.total>0?(c.raw/overall.total*100).toFixed(1):0}%)` } } } }
-  });
+  if (charts.donut) {
+    charts.donut.data.datasets[0].data = [overall.present, overall.total - overall.present];
+    charts.donut.update();
+  } else {
+    charts.donut = new Chart(document.getElementById('donutChart').getContext('2d'), {
+      type:'doughnut',
+      data:{ labels:['Present','Absent'], datasets:[{ data:[overall.present,overall.absent], backgroundColor:['#00ff88','#ff3366'], borderWidth:0, hoverOffset:4 }] },
+      options:{ cutout:'72%', responsive:true, maintainAspectRatio:true,
+        plugins:{ legend:{ position:'bottom', labels:{ color:'#8899bb', font:{ size:12, family:'Nunito' }, padding:20 } },
+          tooltip:{ callbacks:{ label:c=>` ${c.label}: ${c.raw} (${overall.total>0?(c.raw/overall.total*100).toFixed(1):0}%)` } } } }
+    });
+  }
 
   const recentEl  = document.getElementById('recent-activity');
   const recentDays = [...new Set(attendanceRecords.map(r=>r.date))].slice(0,7);
@@ -1953,7 +2043,7 @@ function loadDaySchedule() {
   if (isHolidayDay) {
     const holidayRec = alreadyMarked.find(r => r.holiday_reason);
     const reason = holidayRec?.holiday_reason || '';
-    markedBanner.innerHTML = `<div class="holiday-banner">🏖 This day is marked as a <strong>Holiday</strong>${reason ? ` — <em>${reason}</em>` : ''} — all periods are excluded from attendance calculations.</div>`;
+    markedBanner.innerHTML = `<div class="holiday-banner">🏖 This day is marked as a <strong>Holiday</strong>${reason ? ` — <em>${escapeHTML(reason)}</em>` : ''} — all periods are excluded from attendance calculations.</div>`;
     scheduleEl.innerHTML = ''; saveSection.style.display = 'none'; return;
   }
 
@@ -2116,7 +2206,9 @@ async function _applyHolidayStatus(dateStr, reason) {
   const { error } = await db.from('attendance_records').upsert(placeholders, { onConflict: 'date,period,subject' });
   if (error) { showToast('Failed to mark holiday: ' + error.message, 'error'); return; }
 
-  const { data } = await db.from('attendance_records').select('*').order('date', { ascending: false });
+  let query = db.from('attendance_records').select('*');
+  if (activeSemester) query = query.eq('semester_id', activeSemester.id);
+  const { data } = await query.order('date', { ascending: false });
   if (data) attendanceRecords = activeSemester ? data.filter(r => r.semester_id === activeSemester.id || r.semester_id === null) : data;
 
   isHolidayDay = true;
@@ -2211,7 +2303,9 @@ async function saveAttendance() {
   try {
     const { error } = await db.from('attendance_records').upsert(records,{onConflict:'date,period,subject'});
     if (error) throw error;
-    const { data } = await db.from('attendance_records').select('*').order('date',{ascending:false});
+    let query = db.from('attendance_records').select('*');
+    if (activeSemester) query = query.eq('semester_id', activeSemester.id);
+    const { data } = await query.order('date',{ascending:false});
     if (data) attendanceRecords = activeSemester ? data.filter(r=>r.semester_id===activeSemester.id||r.semester_id===null) : data;
     showToast('✅ Attendance saved!','success');
     btn.disabled=false; btn.innerHTML='<span>💾</span> Save Attendance';
@@ -2249,9 +2343,9 @@ function renderTimetable() {
   document.getElementById('subject-details-body').innerHTML = Object.entries(ACTIVE_SUBJECTS).map(([key,sub],i) =>
     `<tr>
       <td style="color:var(--text2)">${i+1}</td>
-      <td><span style="background:${sub.color}22;color:${sub.color};padding:2px 8px;border-radius:6px;font-size:0.75rem;font-weight:700">${sub.code||key}</span></td>
-      <td style="text-align:left;font-weight:700"><span style="color:${sub.color}">●</span> ${sub.name}</td>
-      <td style="color:var(--text2);font-size:0.82rem">${sub.faculty||'—'}</td>
+      <td><span style="background:${sub.color}22;color:${sub.color};padding:2px 8px;border-radius:6px;font-size:0.75rem;font-weight:700">${escapeHTML(sub.code||key)}</span></td>
+      <td style="text-align:left;font-weight:700"><span style="color:${sub.color}">●</span> ${escapeHTML(sub.name)}</td>
+      <td style="color:var(--text2);font-size:0.82rem">${escapeHTML(sub.faculty||'—')}</td>
       <td><span style="font-family:'Orbitron',sans-serif;font-size:0.85rem;color:var(--primary)">${sub.pw}</span></td>
     </tr>`
   ).join('');
@@ -2414,20 +2508,28 @@ async function saveEditTimetable() {
 // ══════════════════════════════════════════
 function renderAnalytics() {
   const stats = calcSubjectStats();
-  if (charts.bar) charts.bar.destroy();
   const labels = Object.keys(stats).map(k=>k.replace(/_LAB$/,' Lab').replace(/_/,' '));
   const pcts   = Object.values(stats).map(s=>parseFloat(s.pct.toFixed(1)));
   const colors = Object.keys(stats).map(k=>ACTIVE_SUBJECTS[k]?.color||'#00d4ff');
-  charts.bar = new Chart(document.getElementById('barChart').getContext('2d'), {
-    type:'bar',
-    data:{ labels, datasets:[{ label:'Attendance %', data:pcts, backgroundColor:colors.map(c=>c+'88'), borderColor:colors, borderWidth:2, borderRadius:8 }] },
-    options:{ responsive:true, maintainAspectRatio:false,
-      scales:{ y:{min:0,max:100,grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#8899bb',callback:v=>v+'%'},border:{color:'transparent'}},
-        x:{grid:{display:false},ticks:{color:'#8899bb',font:{size:11}},border:{color:'transparent'}} },
-      plugins:{ legend:{display:false}, tooltip:{callbacks:{label:c=>` ${c.raw}%`}} } }
-  });
-  charts.bar.data.datasets.push({ type:'line', label:'75% Target', data:Array(labels.length).fill(75), borderColor:'#ffbb00', borderWidth:2, borderDash:[6,4], pointRadius:0, fill:false });
-  charts.bar.update();
+  if (charts.bar) {
+    charts.bar.data.labels = labels;
+    charts.bar.data.datasets[0].data = pcts;
+    charts.bar.data.datasets[0].backgroundColor = colors.map(c=>c+'88');
+    charts.bar.data.datasets[0].borderColor = colors;
+    charts.bar.data.datasets[1].data = Array(labels.length).fill(75);
+    charts.bar.update();
+  } else {
+    charts.bar = new Chart(document.getElementById('barChart').getContext('2d'), {
+      type:'bar',
+      data:{ labels, datasets:[{ label:'Attendance %', data:pcts, backgroundColor:colors.map(c=>c+'88'), borderColor:colors, borderWidth:2, borderRadius:8 }] },
+      options:{ responsive:true, maintainAspectRatio:false,
+        scales:{ y:{min:0,max:100,grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#8899bb',callback:v=>v+'%'},border:{color:'transparent'}},
+          x:{grid:{display:false},ticks:{color:'#8899bb',font:{size:11}},border:{color:'transparent'}} },
+        plugins:{ legend:{display:false}, tooltip:{callbacks:{label:c=>` ${c.raw}%`}} } }
+    });
+    charts.bar.data.datasets.push({ type:'line', label:'75% Target', data:Array(labels.length).fill(75), borderColor:'#ffbb00', borderWidth:2, borderDash:[6,4], pointRadius:0, fill:false });
+    charts.bar.update();
+  }
 
   document.getElementById('subject-analytics-grid').innerHTML = Object.entries(stats).map(([key,s]) => {
     const sub=ACTIVE_SUBJECTS[key]; const pctClass=s.pct>=75?'pct-green':s.pct>=65?'pct-yellow':'pct-red';
@@ -2895,10 +2997,33 @@ async function saveInitialData() {
 }
 
 async function clearHistory() {
-  if (!confirm('⚠️ Delete ALL attendance records? This cannot be undone!')) return;
-  const { error } = await db.from('attendance_records').delete().gte('id','00000000-0000-0000-0000-000000000000');
-  if (error) { showToast('Failed: '+error.message,'error'); return; }
-  attendanceRecords = []; showToast('History cleared','info');
+  const modal = document.createElement('div');
+  modal.className = 'confirm-delete-modal';
+  modal.innerHTML = `<div class="confirm-delete-box">
+    <h3>⚠️ Delete ALL Records</h3>
+    <p>This will permanently delete all attendance records for the active semester. This cannot be undone.</p>
+    <p style="color:#ff3366;font-weight:700;font-size:0.9rem;">Type <span style="font-family:'Orbitron',monospace;letter-spacing:3px">DELETE</span> to confirm</p>
+    <input type="text" id="delete-confirm-input" placeholder="Type DELETE" autocomplete="off">
+    <div class="btn-row">
+      <button class="btn" style="background:var(--glass);color:var(--muted)" onclick="this.closest('.confirm-delete-modal').remove()">Cancel</button>
+      <button class="btn" id="delete-confirm-btn" style="background:#ff3366;color:#fff;opacity:0.4;pointer-events:none">Delete All</button>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+  const inp = document.getElementById('delete-confirm-input');
+  const btn = document.getElementById('delete-confirm-btn');
+  inp.addEventListener('input', () => {
+    if (inp.value === 'DELETE') { btn.style.opacity = '1'; btn.style.pointerEvents = 'auto'; }
+    else { btn.style.opacity = '0.4'; btn.style.pointerEvents = 'none'; }
+  });
+  btn.addEventListener('click', async () => {
+    if (inp.value !== 'DELETE') return;
+    const { error } = await db.from('attendance_records').delete().gte('id','00000000-0000-0000-0000-000000000000');
+    if (error) { showToast('Failed: '+error.message,'error'); modal.remove(); return; }
+    attendanceRecords = []; showToast('History cleared','info'); modal.remove();
+  });
+  modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+  inp.focus();
 }
 
 function exportData() {
@@ -2911,6 +3036,72 @@ function exportData() {
   a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
   a.download='nagaraju_attendance_'+(activeSemester?.name||'export').replace(/\s+/g,'_')+'_'+new Date().toISOString().split('T')[0]+'.csv';
   a.click(); showToast('📤 Exported!','success');
+}
+
+async function exportFullBackup() {
+  const backup = {
+    version: 1,
+    exported_at: new Date().toISOString(),
+    semester: activeSemester || null,
+    subjects: ACTIVE_SUBJECTS,
+    timetable: ACTIVE_TIMETABLE,
+    initial_data: initialData,
+    attendance_records: attendanceRecords
+  };
+  const json = JSON.stringify(backup, null, 2);
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+  a.download = 'nagaraju_backup_' + (activeSemester?.name || 'full').replace(/\s+/g, '_') + '_' + new Date().toISOString().split('T')[0] + '.json';
+  a.click();
+  showToast('📦 Full backup exported!', 'success');
+}
+
+async function importBackup() {
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = '.json';
+  input.onchange = async (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    try {
+      const text = await file.text();
+      const backup = JSON.parse(text);
+      if (!backup.version || !backup.attendance_records) {
+        showToast('Invalid backup file format', 'error'); return;
+      }
+      if (!confirm(`This will import ${backup.attendance_records.length} records from backup dated ${backup.exported_at}. Continue?`)) return;
+      // Import attendance records
+      if (backup.attendance_records.length > 0) {
+        const batchSize = 100;
+        for (let i = 0; i < backup.attendance_records.length; i += batchSize) {
+          const batch = backup.attendance_records.slice(i, i + batchSize).map(r => ({
+            date: r.date, day: r.day, period: r.period, subject: r.subject,
+            subject_name: r.subject_name, status: r.status, is_holiday: r.is_holiday,
+            holiday_reason: r.holiday_reason || null,
+            semester_id: r.semester_id || activeSemester?.id || null,
+            owner_id: r.owner_id || activeSemester?.owner_id || 'd981fbb6-80f6-442c-9bcd-76d15841cb79'
+          }));
+          const { error } = await db.from('attendance_records').upsert(batch, { onConflict: 'date,period,subject' });
+          if (error) { showToast('Import error: ' + error.message, 'error'); return; }
+        }
+      }
+      // Import initial data
+      if (backup.initial_data) {
+        const initUpdates = Object.entries(backup.initial_data).map(([key, d]) => ({
+          subject: key, present: d.present, total: d.total,
+          semester_id: activeSemester?.id || null,
+          owner_id: activeSemester?.owner_id || 'd981fbb6-80f6-442c-9bcd-76d15841cb79',
+          updated_at: new Date().toISOString()
+        }));
+        if (initUpdates.length > 0) {
+          await db.from('subject_initial').upsert(initUpdates, { onConflict: 'subject' });
+        }
+      }
+      await loadData(); renderDashboard(); renderSettings();
+      showToast(`✅ Imported ${backup.attendance_records.length} records!`, 'success');
+    } catch (err) {
+      showToast('Failed to parse backup: ' + err.message, 'error');
+    }
+  };
+  input.click();
 }
 
 function copySQL(id) {
@@ -2933,56 +3124,171 @@ function initCalendarPage() {
 }
 
 function renderCalendar() {
-  const grid = document.getElementById('calendar-grid');
-  const title = document.getElementById('calendar-month-title');
-  if (!grid || !title) return;
-  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  title.textContent = `${months[calendarMonth]} ${calendarYear}`;
-  const firstDay = new Date(calendarYear, calendarMonth, 1);
-  const lastDay = new Date(calendarYear, calendarMonth + 1, 0);
-  const startDow = firstDay.getDay();
-  const daysInMonth = lastDay.getDate();
-  const today = new Date().toISOString().split('T')[0];
-  let html = ['SUN','MON','TUE','WED','THU','FRI','SAT'].map(d =>
-    `<div class="calendar-header-cell">${d}</div>`
-  ).join('');
-  for (let i = 0; i < startDow; i++) html += '<div class="calendar-cell empty"></div>';
-  for (let day = 1; day <= daysInMonth; day++) {
-    const dateStr = `${calendarYear}-${String(calendarMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-    const dayRecs = attendanceRecords.filter(r => r.date === dateStr);
-    const isToday = dateStr === today;
-    const dow = new Date(dateStr + 'T00:00:00').getDay();
-    const dayName = WEEK_DAYS[dow];
-    const hasTT = (ACTIVE_TIMETABLE[dayName] || []).length > 0;
-    const isHol = dayRecs.length > 0 && dayRecs.every(r => r.is_holiday);
-    let cls = 'calendar-cell', pctText = '', icon = '';
-    if (isToday) cls += ' today';
-    if (isHol) { cls += ' cal-holiday'; icon = '🏖'; }
-    else if (dow === 0 || !hasTT) { cls += ' cal-noclass'; }
-    else if (dayRecs.length > 0) {
-      const p = dayRecs.filter(r => r.status === 'P' && !r.is_holiday).length;
-      const t = dayRecs.filter(r => !r.is_holiday).length;
-      const pct = t > 0 ? (p / t * 100) : 0;
-      pctText = `${pct.toFixed(0)}%`;
-      if (pct >= 100) { cls += ' cal-present'; icon = '✓'; }
-      else if (pct >= 75) { cls += ' cal-present'; }
-      else if (pct >= 50) { cls += ' cal-partial'; }
-      else { cls += ' cal-absent'; }
-    }
-    html += `<div class="${cls}" onclick="showCalendarDayDetail('${dateStr}')">
-      <span class="cal-day-num">${day}</span>
-      ${pctText ? `<span class="cal-day-pct">${pctText}</span>` : ''}
-      ${icon ? `<span class="cal-day-icon">${icon}</span>` : ''}
-    </div>`;
+  const grid = document.getElementById('heatmap-grid');
+  const monthsEl = document.getElementById('heatmap-months');
+  const statsEl = document.getElementById('heatmap-stats');
+  if (!grid) return;
+
+  // Determine date range: use semester dates or fall back to current month
+  let startDate, endDate;
+  if (activeSemester && activeSemester.start_date) {
+    startDate = new Date(activeSemester.start_date + 'T00:00:00');
+    endDate = activeSemester.end_date ? new Date(activeSemester.end_date + 'T00:00:00') : new Date();
+    if (endDate < new Date()) endDate = new Date();
+  } else {
+    startDate = new Date(); startDate.setMonth(startDate.getMonth() - 3);
+    endDate = new Date();
   }
-  grid.innerHTML = html;
+
+  // Align startDate to previous Monday (ISO week starts Monday)
+  const startDow = startDate.getDay();
+  const mondayOffset = startDow === 0 ? -6 : 1 - startDow;
+  const gridStart = new Date(startDate);
+  gridStart.setDate(gridStart.getDate() + mondayOffset);
+
+  const today = new Date().toISOString().split('T')[0];
+  const WEEK_DAYS_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const MONTH_ABBR = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  // Build attendance lookup for fast access
+  const attLookup = {};
+  attendanceRecords.forEach(r => {
+    if (!attLookup[r.date]) attLookup[r.date] = [];
+    attLookup[r.date].push(r);
+  });
+
+  // Generate weeks
+  let weeks = [];
+  let currentDate = new Date(gridStart);
+  let totalPresent = 0, totalClasses = 0, daysAttended = 0, perfectDays = 0;
+
+  while (currentDate <= endDate) {
+    let week = [];
+    for (let d = 0; d < 7; d++) {
+      const dateStr = currentDate.toISOString().split('T')[0];
+      const dow = currentDate.getDay();
+      const dayName = WEEK_DAYS_NAMES[dow];
+      const dayRecs = attLookup[dateStr] || [];
+      const hasTT = (ACTIVE_TIMETABLE[dayName] || []).length > 0;
+      const isHol = dayRecs.length > 0 && dayRecs.every(r => r.is_holiday);
+      const isFuture = dateStr > today;
+      const isBeforeSem = activeSemester && activeSemester.start_date && dateStr < activeSemester.start_date;
+
+      let level = 'lvl-0';
+      let tooltipText = '';
+      const fmtDate = `${WEEK_DAYS_NAMES[dow].slice(0,3)}, ${MONTH_ABBR[currentDate.getMonth()]} ${currentDate.getDate()}`;
+
+      if (dow === 0) {
+        level = 'lvl-sunday';
+        tooltipText = `${fmtDate} — Sunday`;
+      } else if (isFuture || isBeforeSem) {
+        level = 'lvl-future';
+        tooltipText = `${fmtDate} — ${isFuture ? 'Upcoming' : 'Before semester'}`;
+      } else if (isHol) {
+        level = 'lvl-holiday';
+        const reason = dayRecs[0]?.holiday_reason || '';
+        tooltipText = `${fmtDate} — Holiday${reason ? ': ' + reason : ''}`;
+      } else if (!hasTT) {
+        level = 'lvl-0';
+        tooltipText = `${fmtDate} — No classes`;
+      } else if (dayRecs.length > 0) {
+        const p = dayRecs.filter(r => r.status === 'P' && !r.is_holiday).length;
+        const t = dayRecs.filter(r => !r.is_holiday).length;
+        const pct = t > 0 ? (p / t * 100) : 0;
+        totalPresent += p; totalClasses += t; daysAttended++;
+        if (pct >= 100) { level = 'lvl-4'; perfectDays++; }
+        else if (pct >= 75) level = 'lvl-3';
+        else if (pct >= 50) level = 'lvl-2';
+        else level = 'lvl-1';
+        tooltipText = `${fmtDate} — ${p}/${t} present (${pct.toFixed(0)}%)`;
+      } else {
+        tooltipText = `${fmtDate} — No data`;
+      }
+
+      week.push({ dateStr, level, tooltipText, month: currentDate.getMonth(), day: currentDate.getDate(), dow });
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    weeks.push(week);
+  }
+
+  // Render month labels
+  if (monthsEl) {
+    let monthHTML = '';
+    let lastMonth = -1;
+    const cellW = window.innerWidth <= 768 ? 13 : 16; // cell width + gap
+    weeks.forEach((week, wi) => {
+      const firstDay = week.find(d => d.dow !== 0 && d.level !== 'lvl-future');
+      const m = firstDay ? firstDay.month : week[0].month;
+      if (m !== lastMonth) {
+        monthHTML += `<span style="min-width:${cellW}px">${MONTH_ABBR[m]}</span>`;
+        lastMonth = m;
+      } else {
+        monthHTML += `<span style="min-width:${cellW}px"></span>`;
+      }
+    });
+    monthsEl.innerHTML = monthHTML;
+  }
+
+  // Render grid - skip Sunday row (index 0), show Mon-Sat
+  let gridHTML = '';
+  weeks.forEach(week => {
+    let weekHTML = '<div class="heatmap-week">';
+    for (let d = 1; d <= 6; d++) { // Mon(1) to Sat(6)
+      const cell = week[d];
+      weekHTML += `<div class="heatmap-cell ${cell.level}" data-date="${cell.dateStr}" data-tip="${escapeHTML(cell.tooltipText)}" onclick="showCalendarDayDetail('${cell.dateStr}')"></div>`;
+    }
+    weekHTML += '</div>';
+    gridHTML += weekHTML;
+  });
+  grid.innerHTML = gridHTML;
+
+  // Render stats
+  if (statsEl) {
+    const overallPct = totalClasses > 0 ? (totalPresent / totalClasses * 100).toFixed(1) : '0.0';
+    statsEl.innerHTML = `
+      <span class="hm-stat"><strong>${totalPresent}</strong> present</span>
+      <span class="hm-stat"><strong>${totalClasses - totalPresent}</strong> absent</span>
+      <span class="hm-stat"><strong>${totalClasses}</strong> total classes</span>
+      <span class="hm-stat"><strong>${overallPct}%</strong> overall</span>
+      <span class="hm-stat"><strong>${perfectDays}</strong> perfect days</span>
+    `;
+  }
+
+  // Setup tooltips
+  setupHeatmapTooltips();
+
   const detailEl = document.getElementById('calendar-day-detail');
   if (detailEl) detailEl.innerHTML = '';
 }
 
-function calendarPrev() { calendarMonth--; if (calendarMonth < 0) { calendarMonth = 11; calendarYear--; } renderCalendar(); }
-function calendarNext() { calendarMonth++; if (calendarMonth > 11) { calendarMonth = 0; calendarYear++; } renderCalendar(); }
-function calendarToday() { const n = new Date(); calendarYear = n.getFullYear(); calendarMonth = n.getMonth(); renderCalendar(); }
+function setupHeatmapTooltips() {
+  let tooltip = document.getElementById('heatmap-tooltip');
+  if (!tooltip) {
+    tooltip = document.createElement('div');
+    tooltip.id = 'heatmap-tooltip';
+    tooltip.className = 'heatmap-tooltip';
+    tooltip.style.display = 'none';
+    document.body.appendChild(tooltip);
+  }
+  const grid = document.getElementById('heatmap-grid');
+  if (!grid) return;
+  grid.addEventListener('mouseover', (e) => {
+    const cell = e.target.closest('.heatmap-cell');
+    if (cell && cell.dataset.tip) {
+      tooltip.textContent = cell.dataset.tip;
+      tooltip.style.display = 'block';
+    }
+  });
+  grid.addEventListener('mousemove', (e) => {
+    if (tooltip.style.display === 'block') {
+      tooltip.style.left = (e.clientX + 12) + 'px';
+      tooltip.style.top = (e.clientY - 30) + 'px';
+    }
+  });
+  grid.addEventListener('mouseout', (e) => {
+    if (!e.target.closest('.heatmap-cell')) tooltip.style.display = 'none';
+  });
+}
 
 function showCalendarDayDetail(dateStr) {
   const el = document.getElementById('calendar-day-detail');
@@ -2999,7 +3305,7 @@ function showCalendarDayDetail(dateStr) {
   }
   if (isHol) {
     const reason = dayRecs.find(r => r.holiday_reason)?.holiday_reason || '';
-    el.innerHTML = `<div class="card calendar-day-detail-card"><div class="section-h" style="margin-bottom:10px">📅 ${fmtDate}</div><div class="holiday-banner">🏖 Holiday${reason ? ': ' + reason : ''} — excluded from attendance</div></div>`;
+    el.innerHTML = `<div class="card calendar-day-detail-card"><div class="section-h" style="margin-bottom:10px">📅 ${fmtDate}</div><div class="holiday-banner">🏖 Holiday${reason ? ': ' + escapeHTML(reason) : ''} — excluded from attendance</div></div>`;
     return;
   }
   const p = dayRecs.filter(r => r.status === 'P').length, t = dayRecs.length;
@@ -3112,7 +3418,7 @@ function renderWeeklyGoal() {
 function renderTrendChart() {
   const canvas = document.getElementById('trendChart');
   if (!canvas) return;
-  if (charts.trend) charts.trend.destroy();
+
   const allDates = [...new Set(attendanceRecords.filter(r => !r.is_holiday).map(r => r.date))].sort();
   if (allDates.length === 0) return;
   const weekBuckets = {};
@@ -3144,14 +3450,20 @@ function renderTrendChart() {
   const labels = weeks.map(w => new Date(w + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }));
   // 75% target line
   datasets.push({ label: '75% Target', data: Array(weeks.length).fill(75), borderColor: '#ffbb00', borderWidth: 2, borderDash: [6,4], pointRadius: 0, fill: false });
-  charts.trend = new Chart(canvas.getContext('2d'), {
-    type: 'line', data: { labels, datasets },
-    options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
-      scales: { y: { min: 0, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8899bb', callback: v => v + '%' }, border: { color: 'transparent' } },
-        x: { grid: { display: false }, ticks: { color: '#8899bb', font: { size: 10 } }, border: { color: 'transparent' } } },
-      plugins: { legend: { position: 'bottom', labels: { color: '#8899bb', font: { size: 10, family: 'Nunito' }, boxWidth: 12, padding: 12 } },
-        tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${c.raw}%` } } } }
-  });
+  if (charts.trend) {
+    charts.trend.data.labels = labels;
+    charts.trend.data.datasets = datasets;
+    charts.trend.update();
+  } else {
+    charts.trend = new Chart(canvas.getContext('2d'), {
+      type: 'line', data: { labels, datasets },
+      options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+        scales: { y: { min: 0, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8899bb', callback: v => v + '%' }, border: { color: 'transparent' } },
+          x: { grid: { display: false }, ticks: { color: '#8899bb', font: { size: 10 } }, border: { color: 'transparent' } } },
+        plugins: { legend: { position: 'bottom', labels: { color: '#8899bb', font: { size: 10, family: 'Nunito' }, boxWidth: 12, padding: 12 } },
+          tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${c.raw}%` } } } }
+    });
+  }
 }
 
 // ══════════════════════════════════════════
@@ -3177,7 +3489,7 @@ function renderHolidayMgmt() {
     `<div class="holiday-mgmt-item">
       <div class="holiday-mgmt-date">${h.date}</div>
       <div class="holiday-mgmt-day">${h.day.slice(0,3)}</div>
-      <div class="holiday-mgmt-name">🏖 ${h.reason}</div>
+      <div class="holiday-mgmt-name">🏖 ${escapeHTML(h.reason)}</div>
       <button class="holiday-mgmt-remove" onclick="removeHolidayFromMgmt('${h.date}')">Remove</button>
     </div>`
   ).join('')}</div>
@@ -3303,6 +3615,51 @@ function updateThemeButtons() {
   if (lightBtn) lightBtn.style.borderColor = current === 'light' ? 'var(--primary)' : 'var(--border)';
 }
 
+// ═══ Keyboard Shortcuts ═══
+function initKeyboardShortcuts() {
+  document.addEventListener('keydown', (e) => {
+    // Ignore if typing in an input/textarea
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+    // Ignore if modal is open
+    if (document.querySelector('.confirm-delete-modal, .kbd-modal')) return;
+    switch(e.key) {
+      case '1': e.preventDefault(); showSection('dashboard'); break;
+      case '2': e.preventDefault(); showSection('mark'); break;
+      case '3': e.preventDefault(); showSection('timetable'); break;
+      case '4': e.preventDefault(); showSection('calendar'); break;
+      case '5': e.preventDefault(); showSection('analytics'); break;
+      case '6': e.preventDefault(); showSection('history'); break;
+      case '7': e.preventDefault(); showSection('settings'); break;
+      case '?': e.preventDefault(); showKeyboardHelp(); break;
+    }
+    if (e.ctrlKey && e.key === 's') {
+      e.preventDefault();
+      if (document.getElementById('section-mark')?.style.display !== 'none') saveAttendance();
+    }
+  });
+}
+
+function showKeyboardHelp() {
+  if (document.querySelector('.kbd-modal')) { document.querySelector('.kbd-modal').remove(); return; }
+  const modal = document.createElement('div');
+  modal.className = 'kbd-modal';
+  modal.innerHTML = `<div class="kbd-box">
+    <h3>⌨️ Keyboard Shortcuts</h3>
+    <div class="kbd-row"><span class="kbd-key">1</span><span class="kbd-desc">Dashboard</span></div>
+    <div class="kbd-row"><span class="kbd-key">2</span><span class="kbd-desc">Mark Attendance</span></div>
+    <div class="kbd-row"><span class="kbd-key">3</span><span class="kbd-desc">Timetable</span></div>
+    <div class="kbd-row"><span class="kbd-key">4</span><span class="kbd-desc">Calendar</span></div>
+    <div class="kbd-row"><span class="kbd-key">5</span><span class="kbd-desc">Analytics</span></div>
+    <div class="kbd-row"><span class="kbd-key">6</span><span class="kbd-desc">History</span></div>
+    <div class="kbd-row"><span class="kbd-key">7</span><span class="kbd-desc">Settings</span></div>
+    <div class="kbd-row"><span class="kbd-key">Ctrl+S</span><span class="kbd-desc">Save Attendance</span></div>
+    <div class="kbd-row"><span class="kbd-key">?</span><span class="kbd-desc">Toggle this help</span></div>
+    <button class="btn" style="margin-top:16px;width:100%;background:var(--glass)" onclick="this.closest('.kbd-modal').remove()">Close</button>
+  </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+}
+
 // ══════════════════════════════════════════
 //  PWA SERVICE WORKER
 // ══════════════════════════════════════════
@@ -3321,7 +3678,15 @@ function showToast(msg, type='info') {
   const toast=document.getElementById('toast');
   const el=document.createElement('div');
   el.className=`toast-item toast-${type}`; el.textContent=msg;
-  toast.appendChild(el); setTimeout(()=>el.remove(),3000);
+  if (type === 'error' || type === 'warning') {
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'toast-close'; closeBtn.innerHTML = '✕';
+    closeBtn.onclick = () => el.remove();
+    el.appendChild(closeBtn);
+  } else {
+    setTimeout(()=>el.remove(),3000);
+  }
+  toast.appendChild(el);
 }
 
 // ══════════════════════════════════════════
@@ -3362,6 +3727,7 @@ async function init() {
 
   showToast('👋 Welcome, Nagaraju!','info');
   registerSW();
+  initKeyboardShortcuts();
   checkAndNotify();
   updateLiveIndicators();
   setInterval(updateLiveIndicators, 60000);
