@@ -595,6 +595,56 @@ a{color:var(--ink)}
 #refresh-indicator .ms{font-size:18px;animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 
+/* ═══════════ Motion ═══════════ */
+:root{--ease-out:cubic-bezier(.2,.8,.2,1);--ease-spring:cubic-bezier(.2,1.5,.4,1)}
+/* Page entrance: header + cards rise in sequence (class is added for ~1.6s on navigation) */
+.section.entering .page-header{animation:riseIn .45s var(--ease-out) both}
+.section.entering .card{animation:riseIn .5s var(--ease-out) both;animation-delay:calc(var(--i,0) * 60ms + 60ms)}
+@keyframes riseIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+/* Hero meter fills; subject bars grow one after another */
+.meter-fill{transition:width .9s var(--ease-out)}
+.section.entering .meter-mark{animation:markDrop .5s var(--ease-spring) .5s both}
+@keyframes markDrop{from{transform:translateY(-10px);opacity:0}to{transform:none;opacity:1}}
+.section.entering .subj-bar i{animation:growX .9s var(--ease-out) both;transform-origin:left center;animation-delay:calc(var(--j,0) * 45ms + 250ms)}
+@keyframes growX{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.section.entering .hero-verdict{animation:riseIn .5s var(--ease-out) .35s both}
+/* P / A pop */
+.att-btn.active,.seg button.pop{animation:pop .3s var(--ease-spring)}
+@keyframes pop{0%{transform:scale(.82)}100%{transform:scale(1)}}
+/* Tactile press */
+.btn,.save-btn,.seg button,.att-btn,.day-chip,.tab-btn,.icon-btn,.nav-item,.bnav-item{transition:transform .12s ease,background .15s,border-color .15s,color .15s}
+.btn:active:not(:disabled),.save-btn:active:not(:disabled),.seg button:active,.att-btn:active,.day-chip:active,.tab-btn:active,.icon-btn:active{transform:scale(.96)}
+.nav-item:hover .ms{transform:translateX(2px)}
+.nav-item .ms{transition:transform .2s var(--ease-out)}
+/* Bottom tab pill grows into place */
+.bnav-icon{position:relative}
+.bnav-item.active .bnav-icon{background:none}
+.bnav-icon::before{content:'';position:absolute;inset:0;border-radius:15px;background:var(--ink-soft);transform:scaleX(.3);opacity:0;transition:transform .35s var(--ease-spring),opacity .2s}
+.bnav-item.active .bnav-icon::before{transform:scaleX(1);opacity:1}
+.bnav-icon .ms{position:relative}
+.bnav-item.active .bnav-icon .ms{animation:pop .35s var(--ease-spring)}
+/* Theme toggle icon spins; circular reveal uses the View Transitions API */
+.theme-toggle-btn .ms{transition:transform .5s var(--ease-out)}
+::view-transition-old(root),::view-transition-new(root){animation:none;mix-blend-mode:normal}
+::view-transition-new(root){z-index:2}
+/* Streak flame flicker */
+.streak-fire.hot .ms{animation:flicker 2.4s ease-in-out infinite;transform-origin:50% 90%}
+@keyframes flicker{0%,100%{transform:rotate(-3deg) scale(1)}25%{transform:rotate(2deg) scale(1.06)}50%{transform:rotate(-1deg) scale(.97)}75%{transform:rotate(3deg) scale(1.04)}}
+/* Heatmap wave */
+#section-calendar.entering .heatmap-cell{animation:cellIn .45s var(--ease-out) both;animation-delay:calc(var(--w,0) * 14ms + var(--r,0) * 35ms + 100ms)}
+.heatmap-week .heatmap-cell:nth-child(2){--r:1}.heatmap-week .heatmap-cell:nth-child(3){--r:2}.heatmap-week .heatmap-cell:nth-child(4){--r:3}.heatmap-week .heatmap-cell:nth-child(5){--r:4}.heatmap-week .heatmap-cell:nth-child(6){--r:5}
+@keyframes cellIn{from{opacity:0;transform:scale(.2)}to{opacity:1;transform:scale(1)}}
+/* "Register ink" stamp after a successful save */
+.ink-stamp{position:absolute;top:50%;left:50%;z-index:5;display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 20px;border:3px solid var(--ink);outline:1.5px solid var(--ink);outline-offset:-8px;border-radius:14px;color:var(--ink);background:color-mix(in srgb,var(--card) 88%,transparent);font-weight:800;font-size:1.35rem;letter-spacing:.06em;pointer-events:none;transform:translate(-50%,-50%) rotate(-10deg);animation:stampIn .45s var(--ease-spring) both,stampOut .45s ease 1.6s forwards}
+.ink-stamp .ms{font-size:30px;width:auto}
+.ink-stamp small{font-size:.75rem;font-weight:700;letter-spacing:0;opacity:.8}
+@keyframes stampIn{0%{opacity:0;transform:translate(-50%,-50%) rotate(-26deg) scale(2.4)}60%{opacity:1;transform:translate(-50%,-50%) rotate(-8deg) scale(.92)}100%{opacity:1;transform:translate(-50%,-50%) rotate(-10deg) scale(1)}}
+@keyframes stampOut{to{opacity:0;transform:translate(-50%,-50%) rotate(-10deg) scale(1.08)}}
+.thud{animation:thud .35s ease .28s}
+@keyframes thud{0%,100%{transform:none}40%{transform:translateY(3px) scale(.995)}}
+/* Ink dots burst from the 75% marker when you cross it */
+.ink-dot{position:fixed;border-radius:50%;pointer-events:none;z-index:4000}
+
 /* ═══════════ Responsive ═══════════ */
 @media (max-width:1100px){
   .insights-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
@@ -730,7 +780,7 @@ a{color:var(--ink)}
     <span id="refresh-indicator" role="status"><span class="ms" aria-hidden="true">progress_activity</span><span>Updating</span></span>
     <button class="icon-btn mobile-only" onclick="navigate('timetable')" aria-label="Timetable" title="Timetable"><span class="ms" aria-hidden="true">calendar_view_week</span></button>
     <button class="icon-btn mobile-only" onclick="navigate('settings')" aria-label="Settings" title="Settings"><span class="ms" aria-hidden="true">settings</span></button>
-    <button class="icon-btn theme-toggle-btn" onclick="toggleTheme()" aria-label="Switch to dark theme" title="Switch theme"><span class="ms" aria-hidden="true">dark_mode</span></button>
+    <button class="icon-btn theme-toggle-btn" onclick="toggleTheme(event)" aria-label="Switch to dark theme" title="Switch theme"><span class="ms" aria-hidden="true">dark_mode</span></button>
   </div>
 </header>
 <div class="main-inner">
@@ -841,7 +891,7 @@ a{color:var(--ink)}
   <div id="save-section" style="display:none">
     <div class="mark-actions">
       <button class="btn" onclick="markAllPresent()" id="mark-all-btn"><span class="ms" aria-hidden="true">done_all</span>Mark all present</button>
-      <button class="save-btn" onclick="saveAttendance()" id="save-btn"><span class="ms" aria-hidden="true">save</span>Save attendance</button>
+      <button class="save-btn" onclick="saveAttendanceWithStamp()" id="save-btn"><span class="ms" aria-hidden="true">save</span>Save attendance</button>
     </div>
     <div id="undo-day-strip">
       <button class="undo-day-link" onclick="showUndoDayConfirm()"><span class="ms" aria-hidden="true">undo</span>Undo this day's attendance</button>
@@ -1024,7 +1074,7 @@ a{color:var(--ink)}
       <div><div class="set-row-label">Theme</div><div class="set-row-desc" id="theme-desc">Following your device setting</div></div>
       <div class="btn-row">
         <button class="btn btn-ghost" id="theme-system-btn" onclick="resetThemeToSystem()" style="display:none">Use device setting</button>
-        <button class="btn btn-soft theme-toggle-btn" onclick="toggleTheme()" aria-label="Switch to dark theme"><span class="ms" aria-hidden="true">dark_mode</span><span class="theme-toggle-text">Dark theme</span></button>
+        <button class="btn btn-soft theme-toggle-btn" onclick="toggleTheme(event)" aria-label="Switch to dark theme"><span class="ms" aria-hidden="true">dark_mode</span><span class="theme-toggle-text">Dark theme</span></button>
       </div>
     </div>
   </div>
@@ -1175,6 +1225,97 @@ function ic(name, extra = '') { return `<span class="ms ${extra}" aria-hidden="t
 function statusOf(pct) { return pct >= 75 ? 'safe' : pct >= 65 ? 'warn' : 'risk'; }
 function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
 function shortSubject(key) { return key.replace(/_LAB$/,' Lab').replace(/_/,' '); }
+
+// ═══ Motion helpers (everything is skipped when the user prefers reduced motion) ═══
+function prefersReducedMotion() { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }
+function isEntering(page) { return !!document.getElementById('section-' + page)?.classList.contains('entering'); }
+function indexEnterCards(page) {
+  document.getElementById('section-' + page)?.querySelectorAll('.card').forEach((c, i) => c.style.setProperty('--i', Math.min(i, 8)));
+}
+function playEnter(page) {
+  const sec = document.getElementById('section-' + page);
+  if (!sec || prefersReducedMotion()) return;
+  indexEnterCards(page);
+  sec.classList.remove('entering'); void sec.offsetWidth; sec.classList.add('entering');
+  clearTimeout(sec._enterT);
+  sec._enterT = setTimeout(() => sec.classList.remove('entering'), 1600);
+}
+const _countState = {};
+// Animate a number from its last shown value (or from 0 when the page is entering)
+function countTo(el, key, to, decimals = 0, suffix = '') {
+  if (!el) return;
+  const show = v => { el.innerHTML = v.toFixed(decimals) + suffix; };
+  const entering = isEntering('dashboard');
+  const from = entering ? 0 : (_countState[key] ?? to);
+  _countState[key] = to;
+  cancelAnimationFrame(el._raf);
+  if (prefersReducedMotion() || from === to || document.hidden) { show(to); return; }
+  show(from);
+  const dur = entering ? 1100 : 500, t0 = performance.now();
+  const ease = t => 1 - Math.pow(1 - t, 3);
+  const step = now => {
+    const t = Math.min(1, (now - t0) / dur);
+    show(t < 1 ? from + (to - from) * ease(t) : to);
+    if (t < 1) el._raf = requestAnimationFrame(step);
+  };
+  el._raf = requestAnimationFrame(step);
+}
+function growMeter(fill, pct) {
+  if (isEntering('dashboard') && !prefersReducedMotion()) {
+    fill.style.transition = 'none'; fill.style.width = '0'; void fill.offsetWidth; fill.style.transition = '';
+  }
+  fill.style.width = pct + '%';
+}
+let _lastOverallPct = null;
+function maybeCelebrate75(pct) {
+  const prev = _lastOverallPct; _lastOverallPct = pct;
+  if (prev !== null && prev < 75 && pct >= 75) inkBurst(document.querySelector('#hero-meter .meter-mark'));
+}
+function inkBurst(anchor) {
+  if (!anchor || prefersReducedMotion() || !anchor.animate) return;
+  const r = anchor.getBoundingClientRect();
+  if (!r.width && !r.height) return;
+  const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  const colors = [cssVar('--safe'), cssVar('--ink'), cssVar('--mari')];
+  for (let i = 0; i < 20; i++) {
+    const d = document.createElement('span');
+    const size = 4 + Math.random() * 6;
+    d.className = 'ink-dot';
+    d.style.cssText = `left:${cx}px;top:${cy}px;width:${size}px;height:${size}px;background:${colors[i % 3]}`;
+    document.body.appendChild(d);
+    const a = Math.random() * Math.PI * 2, dist = 30 + Math.random() * 70;
+    d.animate([
+      { transform: 'translate(-50%,-50%) scale(1)', opacity: 1 },
+      { transform: `translate(calc(-50% + ${Math.cos(a) * dist}px), calc(-50% + ${Math.sin(a) * dist - 24}px)) scale(.3)`, opacity: 0 }
+    ], { duration: 700 + Math.random() * 450, easing: 'cubic-bezier(.2,.8,.2,1)' }).onfinish = () => d.remove();
+  }
+}
+// Rubber-stamp "Marked" over a card after a successful save
+function inkStamp(target, label = 'Marked') {
+  if (!target) return;
+  target.querySelectorAll('.ink-stamp').forEach(s => s.remove());
+  const s = document.createElement('div');
+  s.className = 'ink-stamp'; s.setAttribute('aria-hidden', 'true');
+  s.innerHTML = `${ic('check_circle', 'fill')}<span>${label}</span><small>${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</small>`;
+  if (getComputedStyle(target).position === 'static') target.style.position = 'relative';
+  target.appendChild(s);
+  s.addEventListener('animationend', e => { if (e.animationName === 'stampOut') s.remove(); });
+  setTimeout(() => s.remove(), 2600);
+  if (!prefersReducedMotion()) { target.classList.remove('thud'); void target.offsetWidth; target.classList.add('thud'); }
+}
+// Mark page save + stamp when it lands
+async function saveAttendanceWithStamp() {
+  const dateStr = document.getElementById('att-date').value;
+  const before = { ...pendingMarks };
+  const recsRef = attendanceRecords;
+  await saveAttendance();
+  const landed = Object.keys(before).length > 0 && (attendanceRecords !== recsRef || !navigator.onLine) &&
+    Object.entries(before).every(([k, v]) => {
+      const [p, ...sub] = k.split('_');
+      return attendanceRecords.some(r => r.date === dateStr && r.period === parseInt(p) && r.subject === sub.join('_') && r.status === v);
+    });
+  if (landed) inkStamp(document.querySelector('#day-schedule .card'));
+}
 const SUPABASE_URL = 'https://nogzeebpyewftcxbnjax.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5vZ3plZWJweWV3ZnRjeGJuamF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MDgxMjIsImV4cCI6MjA4ODI4NDEyMn0.MNM7K7GdRXumGyq1kK7F9b9O8lYZTfRiC9NP13GU_vw';
 
@@ -1905,6 +2046,7 @@ async function fullReload() {
 
   if (semResult !== 'needs-wizard') {
     setSkeletons(false);
+    playEnter('dashboard');
     renderDashboard();
   } else {
     clearDashCache();
@@ -2073,6 +2215,7 @@ function navigate(page) {
     if (on) n.setAttribute('aria-current', 'page'); else n.removeAttribute('aria-current');
   });
   window.scrollTo(0, 0);
+  playEnter(page);
   if (page === 'dashboard')  renderDashboard();
   if (page === 'mark')       initMarkPage();
   if (page === 'timetable')  renderTimetable();
@@ -2080,6 +2223,7 @@ function navigate(page) {
   if (page === 'analytics')  renderAnalytics();
   if (page === 'history')    renderHistory();
   if (page === 'settings')   renderSettings();
+  indexEnterCards(page);
 }
 // Old keyboard-shortcut code called showSection(); keep it working.
 function showSection(page) { navigate(page); }
@@ -2103,10 +2247,11 @@ function renderDashboard() {
   document.getElementById('dash-date').textContent = new Date().toLocaleDateString('en-IN',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
 
   // ── Hero ──
-  document.getElementById('stat-total-pct').innerHTML = hasData ? `${overall.pct.toFixed(2)}<small>%</small>` : '–';
-  document.getElementById('stat-present').textContent = overall.present;
-  document.getElementById('stat-absent').textContent  = overall.absent;
-  document.getElementById('stat-total').textContent   = overall.total;
+  if (hasData) countTo(document.getElementById('stat-total-pct'), 'pct', overall.pct, 2, '<small>%</small>');
+  else document.getElementById('stat-total-pct').innerHTML = '–';
+  countTo(document.getElementById('stat-present'), 'present', overall.present);
+  countTo(document.getElementById('stat-absent'),  'absent',  overall.absent);
+  countTo(document.getElementById('stat-total'),   'total',   overall.total);
 
   const trendEl = document.getElementById('stat-trend');
   if (isSimulatorActive) { trendEl.className = 'chip chip-ink'; trendEl.innerHTML = `${ic('science')} What-if preview`; }
@@ -2129,8 +2274,9 @@ function renderDashboard() {
     verdictEl.innerHTML = `${ic(STATUS_META[st].icon)}<span>Attend the next ${overallNeeded} class${overallNeeded!==1?'es':''} to get back to 75%</span>`;
   }
   const fill = document.getElementById('hero-fill');
-  fill.style.width = Math.min(overall.pct, 100) + '%';
+  growMeter(fill, Math.min(overall.pct, 100));
   fill.className = `meter-fill bg-${st}`;
+  if (hasData) maybeCelebrate75(overall.pct);
   document.getElementById('hero-meter').setAttribute('aria-label', `Overall attendance ${overall.pct.toFixed(1)}%, 75% required`);
 
   // ── Subject summary ──
@@ -2140,7 +2286,7 @@ function renderDashboard() {
   const subjKeys = Object.keys(stats);
   document.getElementById('dash-subjects').innerHTML = subjKeys.length === 0
     ? '<div class="empty">No subjects configured</div>'
-    : subjKeys.map(key => {
+    : subjKeys.map((key, idx) => {
       const s = stats[key]; const sub = ACTIVE_SUBJECTS[key];
       const sst = statusOf(s.pct);
       let hint;
@@ -2153,7 +2299,7 @@ function renderDashboard() {
           <div class="subj-hint">${hint}</div>
         </div>
         <div class="subj-pct ${s.total===0?'t-muted':'t-'+sst}">${s.total===0?'–':s.pct.toFixed(1)+'%'}</div>
-        <div class="subj-bar" aria-hidden="true"><i class="bg-${sst}" style="width:${Math.min(s.pct,100)}%"></i></div>
+        <div class="subj-bar" aria-hidden="true"><i class="bg-${sst}" style="width:${Math.min(s.pct,100)}%;--j:${idx}"></i></div>
       </div>`;
     }).join('');
 
@@ -2196,6 +2342,7 @@ function renderDashboard() {
 let todayMarks = {};
 let todayMarksDate = null;
 let todaySaving = false;
+let _todayJustSet = null;
 function _todayDateStr() { return new Date().toISOString().split('T')[0]; } // same date convention as the Mark page
 
 function renderMarkToday() {
@@ -2241,8 +2388,8 @@ function renderMarkToday() {
         <div class="period-num">P${p.period}</div>
         <div class="today-info"><div class="today-sub" title="${escapeHTML(name)}">${escapeHTML(name)}</div><div class="today-time">${escapeHTML(p.time || '')}</div></div>
         <div class="seg" role="group" aria-label="P${p.period} ${escapeHTML(name)}">
-          <button class="${v==='P'?'on-p':''}" aria-pressed="${v==='P'}" aria-label="Present" onclick="setTodayMark(${p.period},'${p.subject}','P')">P</button>
-          <button class="${v==='A'?'on-a':''}" aria-pressed="${v==='A'}" aria-label="Absent" onclick="setTodayMark(${p.period},'${p.subject}','A')">A</button>
+          <button class="${v==='P'?'on-p':''} ${v==='P'&&_todayJustSet===k?'pop':''}" aria-pressed="${v==='P'}" aria-label="Present" onclick="setTodayMark(${p.period},'${p.subject}','P')">P</button>
+          <button class="${v==='A'?'on-a':''} ${v==='A'&&_todayJustSet===k?'pop':''}" aria-pressed="${v==='A'}" aria-label="Absent" onclick="setTodayMark(${p.period},'${p.subject}','A')">A</button>
         </div>
       </div>`;
     }).join('')}</div>
@@ -2250,10 +2397,12 @@ function renderMarkToday() {
       ${todaySaving ? ic('progress_activity') + ' Saving…' : ic('save') + ' Save attendance'}
     </button>
     ${!liveDataReady ? '<div class="today-note" style="margin:8px 0 0">Waiting for the latest data before saving…</div>' : ''}`;
+  _todayJustSet = null;
 }
 
 function setTodayMark(period, subject, status) {
   todayMarks[period + '_' + subject] = status;
+  _todayJustSet = period + '_' + subject;
   renderMarkToday();
 }
 
@@ -2273,6 +2422,7 @@ async function saveTodayFromDashboard() {
   });
 
   todaySaving = true; renderMarkToday();
+  const recsRef = attendanceRecords;
   try {
     await saveAttendance();
   } finally {
@@ -2285,6 +2435,7 @@ async function saveTodayFromDashboard() {
   });
   if (saved) todayMarks = {};
   renderDashboard();
+  if (saved && (attendanceRecords !== recsRef || !navigator.onLine)) inkStamp(document.getElementById('mark-today-card'));
 }
 
 // ══════════════════════════════════════════
@@ -3572,8 +3723,8 @@ function renderCalendar() {
 
   // Render grid - skip Sunday row (index 0), show Mon-Sat
   let gridHTML = '';
-  weeks.forEach(week => {
-    let weekHTML = '<div class="heatmap-week">';
+  weeks.forEach((week, wi) => {
+    let weekHTML = `<div class="heatmap-week" style="--w:${wi}">`;
     for (let d = 0; d <= 5; d++) { // weeks start on Monday: Mon(0) to Sat(5)
       const cell = week[d];
       weekHTML += `<div class="heatmap-cell ${cell.level}" data-date="${cell.dateStr}" data-tip="${escapeHTML(cell.tooltipText)}" onclick="showCalendarDayDetail('${cell.dateStr}')"></div>`;
@@ -3733,7 +3884,7 @@ function renderWeeklyGoal() {
     <div class="goal-ring-wrap" role="img" aria-label="This week ${wT > 0 ? wPct.toFixed(0) + '%' : 'no classes yet'}">
       <svg viewBox="0 0 80 80" width="80" height="80" aria-hidden="true">
         <circle class="goal-ring-track" cx="40" cy="40" r="34"/>
-        <circle class="goal-ring-fill" cx="40" cy="40" r="34" stroke="${ringColor}" stroke-dasharray="${circ}" stroke-dashoffset="${offset}"/>
+        <circle class="goal-ring-fill" cx="40" cy="40" r="34" stroke="${ringColor}" stroke-dasharray="${circ}" stroke-dashoffset="${isEntering('dashboard') && !prefersReducedMotion() ? circ : offset}" data-to="${offset}"/>
       </svg>
       <div class="goal-ring-center ${wT > 0 ? 't-' + ws : 't-muted'}">${wT > 0 ? wPct.toFixed(0) + '%' : '–'}</div>
     </div>
@@ -3752,6 +3903,9 @@ function renderWeeklyGoal() {
       </div>
     </div>
   </div>`;
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    const f = el.querySelector('.goal-ring-fill'); if (f) f.style.strokeDashoffset = f.dataset.to;
+  }));
 }
 
 // ══════════════════════════════════════════
@@ -3959,8 +4113,24 @@ function loadTheme() {
   }
 }
 
-function toggleTheme() {
-  setTheme(effectiveTheme() === 'dark' ? 'light' : 'dark');
+let _themeSpins = 0;
+function toggleTheme(e) {
+  const next = effectiveTheme() === 'dark' ? 'light' : 'dark';
+  _themeSpins++;
+  document.querySelectorAll('.theme-toggle-btn .ms').forEach(i => { i.style.transform = `rotate(${_themeSpins * 180}deg)`; });
+  if (!document.startViewTransition || prefersReducedMotion()) { setTheme(next); return; }
+  // New theme spreads out in a circle from the button that was pressed
+  const btn = e?.currentTarget;
+  const r = btn ? btn.getBoundingClientRect() : { left: innerWidth - 40, top: 10, width: 40, height: 40 };
+  const x = r.left + r.width / 2, y = r.top + r.height / 2;
+  const radius = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+  const t = document.startViewTransition(() => setTheme(next));
+  t.ready.then(() => {
+    document.documentElement.animate(
+      { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${radius}px at ${x}px ${y}px)`] },
+      { duration: 600, easing: 'cubic-bezier(.2,.8,.2,1)', pseudoElement: '::view-transition-new(root)' }
+    );
+  }).catch(() => {});
 }
 
 function setTheme(theme) {
@@ -4016,7 +4186,7 @@ function initKeyboardShortcuts() {
     }
     if (e.ctrlKey && e.key === 's') {
       e.preventDefault();
-      if (currentPage === 'mark') saveAttendance();
+      if (currentPage === 'mark') saveAttendanceWithStamp();
     }
   });
 }
@@ -4125,7 +4295,7 @@ async function init() {
 
     if (semResult !== 'needs-wizard') {
       setSkeletons(false);
-      if (shownFromCache) rerenderCurrentPage(); else renderDashboard();
+      if (shownFromCache) rerenderCurrentPage(); else { playEnter('dashboard'); renderDashboard(); }
     } else {
       clearDashCache();
     }
